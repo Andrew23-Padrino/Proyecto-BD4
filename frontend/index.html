@@ -237,9 +237,11 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
+                                <th>DNI / Cédula</th>
                                 <th>Nombre Completo</th>
                                 <th>Correo Electrónico</th>
                                 <th>Fecha de Registro</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="table-usuarios-body">
@@ -399,6 +401,11 @@
             </div>
             <form id="form-usuario" onsubmit="submitUsuario(event)">
                 <div class="form-group">
+                    <label for="usuario-dni">Cédula / DNI</label>
+                    <input type="text" id="usuario-dni" required placeholder="ej: 12345678-9">
+                    <span class="error-msg" id="error-usuario-dni"></span>
+                </div>
+                <div class="form-group">
                     <label for="usuario-nombre">Nombre Completo</label>
                     <input type="text" id="usuario-nombre" required placeholder="ej: Carlos Pérez">
                     <span class="error-msg" id="error-usuario-nombre"></span>
@@ -412,6 +419,38 @@
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
                     <button type="submit" class="btn btn-success">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR USUARIO -->
+    <div class="modal-overlay" id="modal-editar-usuario">
+        <div class="modal-content small-modal">
+            <div class="modal-header">
+                <h2>Editar Miembro</h2>
+                <button class="close-btn" onclick="closeModal('modal-editar-usuario')">&times;</button>
+            </div>
+            <form id="form-editar-usuario" onsubmit="submitEditarUsuario(event)">
+                <input type="hidden" id="editar-usuario-id">
+                <div class="form-group">
+                    <label for="editar-usuario-dni">Cédula / DNI</label>
+                    <input type="text" id="editar-usuario-dni" required placeholder="ej: 12345678-9">
+                    <span class="error-msg" id="error-editar-usuario-dni"></span>
+                </div>
+                <div class="form-group">
+                    <label for="editar-usuario-nombre">Nombre Completo</label>
+                    <input type="text" id="editar-usuario-nombre" required placeholder="ej: Carlos Pérez">
+                    <span class="error-msg" id="error-editar-usuario-nombre"></span>
+                </div>
+                <div class="form-group">
+                    <label for="editar-usuario-correo">Correo Electrónico</label>
+                    <input type="email" id="editar-usuario-correo" required placeholder="ej: carlos@correo.com">
+                    <span class="error-msg" id="error-editar-usuario-correo"></span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-editar-usuario')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -446,6 +485,22 @@
                     <button type="submit" class="btn btn-primary">Crear Préstamo</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: TICKET DE PRÉSTAMO -->
+    <div class="modal-overlay" id="modal-ticket">
+        <div class="modal-content ticket-modal">
+            <div class="modal-header">
+                <h2>Comprobante de Préstamo</h2>
+                <button class="close-btn" onclick="closeModal('modal-ticket')">&times;</button>
+            </div>
+            <div class="ticket-container" id="ticket-content">
+                <!-- Se puebla dinámicamente -->
+            </div>
+            <div class="modal-actions" style="margin-top: 15px;">
+                <button class="btn btn-primary" onclick="closeModal('modal-ticket')" style="width: 100%;">Cerrar Comprobante</button>
+            </div>
         </div>
     </div>
 

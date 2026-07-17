@@ -147,8 +147,7 @@ function renderLibrosTable(books) {
     tbody.innerHTML = "";
     
     if (books.length === 0) {
-        const cols = currentRole === 'lector' ? 7 : 6;
-        tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center italic text-muted">No se encontraron libros.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center italic text-muted">No se encontraron libros.</td></tr>`;
         return;
     }
     
@@ -167,6 +166,13 @@ function renderLibrosTable(books) {
                     </button>
                    </td>`
                 : `<td><span class="text-danger font-semibold">Sin Stock</span></td>`;
+        } else {
+            actionCell = `<td>
+                <button class="btn btn-danger btn-small" onclick="eliminarLibro('${b.isbn}', '${b.titulo.replace(/'/g, "\\'")}')">
+                    <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                    <span>Eliminar</span>
+                </button>
+               </td>`;
         }
 
         tr.innerHTML = `
@@ -181,6 +187,31 @@ function renderLibrosTable(books) {
         tbody.appendChild(tr);
     });
     lucide.createIcons();
+}
+
+async function eliminarLibro(isbn, titulo) {
+    if (!confirm(`¿Está seguro de eliminar el libro "${titulo}" (ISBN: ${isbn}) del catálogo?`)) {
+        return;
+    }
+    
+    setLoading(true);
+    try {
+        const response = await fetch(`${API_URL}/api/libros/${isbn}`, {
+            method: "DELETE"
+        });
+        
+        const resData = await response.json();
+        if (!response.ok) {
+            throw new Error(resData.detail || "Error al eliminar libro");
+        }
+        
+        showToast(`Libro "${titulo}" eliminado correctamente del catálogo.`, "success");
+        fetchLibros();
+    } catch (err) {
+        showToast(err.message, "error");
+    } finally {
+        setLoading(false);
+    }
 }
 
 // Búsqueda reactiva de libros con pequeño delay (debouncing)
@@ -287,20 +318,40 @@ function renderUsuariosTable(users) {
     tbody.innerHTML = "";
     
     if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center italic text-muted">No hay usuarios registrados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center italic text-muted">No hay usuarios registrados.</td></tr>`;
         return;
     }
     
     users.forEach(u => {
         const tr = document.createElement("tr");
+        const safeNombre = (u.nombre || "").replace(/'/g, "\\'");
+        const safeCorreo = (u.correo || "").replace(/'/g, "\\'");
+        const safeDni = (u.dni || "").replace(/'/g, "\\'");
+        
         tr.innerHTML = `
             <td><code>${u.id}</code></td>
-            <td class="font-semibold">${u.nombre}</td>
-            <td>${u.correo}</td>
-            <td>${u.fecha_registro}</td>
+            <td><code>${u.dni || "N/A"}</code></td>
+            <td class="font-semibold">${u.nombre || "Sin Nombre"}</td>
+            <td>${u.correo || "Sin Correo"}</td>
+            <td>${u.fecha_registro || "Pendiente"}</td>
+            <td>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-primary btn-small" onclick="abrirEditarUsuario(${u.id}, '${safeNombre}', '${safeCorreo}', '${safeDni}')">
+                        <i data-lucide="edit" style="width: 12px; height: 12px;"></i>
+                        <span>Editar</span>
+                    </button>
+                    <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${u.id}, '${safeNombre}')">
+                        <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>
+                        <span>Eliminar</span>
+                    </button>
+                </div>
+            </td>
         `;
         tbody.appendChild(tr);
     });
+    
+    // Inicializar iconos de Lucide dinámicos
+    lucide.createIcons();
 }
 
 function filterUsuarios() {
@@ -310,7 +361,9 @@ function filterUsuarios() {
         return;
     }
     const filtered = usersData.filter(u => 
-        u.nombre.toLowerCase().includes(searchVal) || u.correo.toLowerCase().includes(searchVal)
+        (u.nombre || "").toLowerCase().includes(searchVal) || 
+        (u.correo || "").toLowerCase().includes(searchVal) ||
+        (u.dni || "").toLowerCase().includes(searchVal)
     );
     renderUsuariosTable(filtered);
 }
@@ -341,10 +394,15 @@ async function submitUsuario(event) {
     event.preventDefault();
     document.querySelectorAll(".error-msg").forEach(span => span.textContent = "");
     
+    const dni = document.getElementById("usuario-dni").value.trim();
     const nombre = document.getElementById("usuario-nombre").value.trim();
     const correo = document.getElementById("usuario-correo").value.trim();
     
     let valido = true;
+    if (!dni) {
+        document.getElementById("error-usuario-dni").textContent = "La cédula/DNI es requerida.";
+        valido = false;
+    }
     if (!nombre) {
         document.getElementById("error-usuario-nombre").textContent = "El nombre es requerido.";
         valido = false;
@@ -364,7 +422,7 @@ async function submitUsuario(event) {
         const response = await fetch(`${API_URL}/api/usuarios`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nombre, correo })
+            body: JSON.stringify({ nombre, correo, dni })
         });
         
         const resData = await response.json();
@@ -379,6 +437,94 @@ async function submitUsuario(event) {
         document.getElementById("email-format-indicator").textContent = "Pendiente de ingreso";
         document.getElementById("email-format-indicator").className = "email-indicator";
         
+        fetchUsuarios();
+    } catch (err) {
+        showToast(err.message, "error");
+    } finally {
+        setLoading(false);
+    }
+}
+
+function abrirEditarUsuario(id, nombre, correo, dni) {
+    document.getElementById("editar-usuario-id").value = id;
+    document.getElementById("editar-usuario-dni").value = dni;
+    document.getElementById("editar-usuario-nombre").value = nombre;
+    document.getElementById("editar-usuario-correo").value = correo;
+    
+    // Limpiar errores previos
+    document.querySelectorAll("#modal-editar-usuario .error-msg").forEach(span => span.textContent = "");
+    
+    openModal("modal-editar-usuario");
+}
+
+async function submitEditarUsuario(event) {
+    event.preventDefault();
+    document.querySelectorAll("#modal-editar-usuario .error-msg").forEach(span => span.textContent = "");
+    
+    const id = document.getElementById("editar-usuario-id").value;
+    const dni = document.getElementById("editar-usuario-dni").value.trim();
+    const nombre = document.getElementById("editar-usuario-nombre").value.trim();
+    const correo = document.getElementById("editar-usuario-correo").value.trim();
+    
+    let valido = true;
+    if (!dni) {
+        document.getElementById("error-editar-usuario-dni").textContent = "La cédula/DNI es requerida.";
+        valido = false;
+    }
+    if (!nombre) {
+        document.getElementById("error-editar-usuario-nombre").textContent = "El nombre es requerido.";
+        valido = false;
+    }
+    if (!correo) {
+        document.getElementById("error-editar-usuario-correo").textContent = "El correo es requerido.";
+        valido = false;
+    } else if (!validateEmail(correo)) {
+        document.getElementById("error-editar-usuario-correo").textContent = "Formato de correo electrónico inválido.";
+        valido = false;
+    }
+    
+    if (!valido) return;
+    
+    setLoading(true);
+    try {
+        const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ nombre, correo, dni })
+        });
+        
+        const resData = await response.json();
+        if (!response.ok) {
+            throw new Error(resData.detail || "Error al actualizar miembro");
+        }
+        
+        showToast(`Miembro "${nombre}" actualizado con éxito.`, "success");
+        closeModal("modal-editar-usuario");
+        fetchUsuarios();
+    } catch (err) {
+        showToast(err.message, "error");
+    } finally {
+        setLoading(false);
+    }
+}
+
+async function eliminarUsuario(id, nombre) {
+    if (!confirm(`¿Está seguro de eliminar al miembro "${nombre}" (ID: ${id})?`)) {
+        return;
+    }
+    
+    setLoading(true);
+    try {
+        const response = await fetch(`${API_URL}/api/usuarios/${id}`, {
+            method: "DELETE"
+        });
+        
+        const resData = await response.json();
+        if (!response.ok) {
+            throw new Error(resData.detail || "Error al eliminar miembro");
+        }
+        
+        showToast(`Miembro "${nombre}" eliminado correctamente.`, "success");
         fetchUsuarios();
     } catch (err) {
         showToast(err.message, "error");
@@ -621,6 +767,11 @@ async function submitPrestamo(event) {
         
         // Refrescar préstamos
         fetchPrestamos();
+        
+        // Mostrar comprobante si el backend lo retornó
+        if (resData.ticket) {
+            mostrarTicket(resData.ticket);
+        }
     } catch (err) {
         // Muestra alerta dinámica en pantalla (Toast/SnackBar) al atrapar excepciones de lógica
         showToast(err.message, "error");
@@ -831,7 +982,7 @@ function enterApp() {
         btnLoans.style.display = "flex";
         btnMyLoans.style.display = "none";
         btnAddBook.style.display = "flex";
-        thAcciones.style.display = "none";
+        thAcciones.style.display = "";
         
         switchTab("dashboard");
     }
@@ -873,6 +1024,11 @@ async function requestLoanDirectly(isbn, title) {
         
         showToast(`Préstamo #${resData.id} registrado con éxito.`, "success");
         fetchLibros();
+        
+        // Mostrar recibo/ticket
+        if (resData.ticket) {
+            mostrarTicket(resData.ticket);
+        }
     } catch (err) {
         showToast(err.message, "error");
     } finally {
@@ -886,4 +1042,48 @@ function reclamarUsuario(idPrestamo, nombreUsuario) {
 
 function sancionarUsuario(idPrestamo, nombreUsuario) {
     showToast(`El miembro "${nombreUsuario}" ha sido sancionado temporalmente en el sistema.`, "error");
+}
+
+function mostrarTicket(ticket) {
+    const content = document.getElementById("ticket-content");
+    content.innerHTML = `
+        <div class="ticket-header">
+            <h3 class="ticket-title">MiBiblioteca</h3>
+            <p class="ticket-subtitle">Comprobante Oficial de Préstamo</p>
+        </div>
+        <div class="ticket-body">
+            <div class="ticket-row">
+                <span class="ticket-label">Folio Préstamo</span>
+                <span class="ticket-value">#${ticket.id}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="ticket-label">Miembro</span>
+                <span class="ticket-value">${ticket.nombre_usuario} (ID: ${ticket.id_usuario})</span>
+            </div>
+            <div class="ticket-row">
+                <span class="ticket-label">DNI/Cédula</span>
+                <span class="ticket-value">${ticket.dni_usuario}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="ticket-label">Libro Prestado</span>
+                <span class="ticket-value">${ticket.titulo_libro}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="ticket-label">ISBN</span>
+                <span class="ticket-value"><code>${ticket.isbn}</code></span>
+            </div>
+            <div class="ticket-row">
+                <span class="ticket-label">Fecha Salida</span>
+                <span class="ticket-value">${ticket.fecha_prestamo}</span>
+            </div>
+            <div class="ticket-row">
+                <span class="ticket-label">Fecha Vencimiento</span>
+                <span class="ticket-value" style="color: var(--warning); font-weight: 700;">${ticket.fecha_devolucion_esperada}</span>
+            </div>
+        </div>
+        <div class="ticket-footer">
+            ¡Disfrute su lectura! Devuelva a tiempo.
+        </div>
+    `;
+    openModal("modal-ticket");
 }

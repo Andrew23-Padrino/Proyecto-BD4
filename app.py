@@ -28,6 +28,7 @@ class LibroCreate(BaseModel):
 class UsuarioCreate(BaseModel):
     nombre: str = Field(..., json_schema_extra={"example": "Juan Perez"})
     correo: str = Field(..., json_schema_extra={"example": "juan@example.com"})
+    dni: str = Field(..., json_schema_extra={"example": "12345678-9"})
 
 class PrestamoCreate(BaseModel):
     id_usuario: int = Field(..., json_schema_extra={"example": 1})
@@ -127,6 +128,7 @@ def get_usuarios():
                 "id": u.id,
                 "nombre": u.nombre,
                 "correo": u.correo,
+                "dni": u.dni,
                 "fecha_registro": u.fecha_registro.strftime('%Y-%m-%d %H:%M') if u.fecha_registro else 'Pendiente'
             } for u in usuarios
         ]
@@ -138,7 +140,7 @@ def get_usuarios():
 def create_usuario(usuario_in: UsuarioCreate):
     """Registra un nuevo miembro."""
     try:
-        nuevo_u = Usuario(nombre=usuario_in.nombre, correo=usuario_in.correo)
+        nuevo_u = Usuario(nombre=usuario_in.nombre, correo=usuario_in.correo, dni=usuario_in.dni)
         nuevo_id = UsuarioService.registrar_usuario(nuevo_u)
         return {"status": "ok", "id": nuevo_id, "message": "Usuario registrado con éxito"}
     except BibliotecaError as e:
@@ -173,14 +175,42 @@ def get_prestamos(solo_activos: bool = False):
 
 @app.post("/api/prestamos", status_code=201)
 def create_prestamo(prestamo_in: PrestamoCreate):
-    """Registra una solicitud de préstamo de libro."""
+    """Registra una solicitud de préstamo de libro y retorna el detalle del recibo."""
     try:
         id_prestamo = PrestamoService.registrar_prestamo(
             id_usuario=prestamo_in.id_usuario,
             isbn=prestamo_in.isbn,
             dias_prestamo=prestamo_in.dias_prestamo
         )
-        return {"status": "ok", "id": id_prestamo, "message": "Préstamo registrado con éxito"}
+        
+        # Obtener los detalles del préstamo recién creado para el recibo (ticket)
+        prestamos = PrestamoService.listar_prestamos(solo_activos=False)
+        p = next((x for x in prestamos if x["id"] == id_prestamo), None)
+        
+        # Buscar el DNI del usuario
+        usuario = UsuarioService.buscar_por_id(prestamo_in.id_usuario)
+        
+        ticket = {}
+        if p and usuario:
+            f_prest = p['fecha_prestamo'].strftime('%Y-%m-%d') if p['fecha_prestamo'] else 'N/A'
+            f_venc = p['fecha_devolucion_esperada'].strftime('%Y-%m-%d') if p['fecha_devolucion_esperada'] else 'N/A'
+            ticket = {
+                "id": id_prestamo,
+                "nombre_usuario": p["nombre_usuario"],
+                "dni_usuario": usuario.dni,
+                "id_usuario": p["id_usuario"],
+                "titulo_libro": p["titulo_libro"],
+                "isbn": p["isbn"],
+                "fecha_prestamo": f_prest,
+                "fecha_devolucion_esperada": f_venc
+            }
+        
+        return {
+            "status": "ok",
+            "id": id_prestamo,
+            "message": "Préstamo registrado con éxito",
+            "ticket": ticket
+        }
     except BibliotecaError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -193,6 +223,47 @@ def devolver_prestamo(id_prestamo: int):
     try:
         PrestamoService.registrar_devolucion(id_prestamo)
         return {"status": "ok", "message": "Devolución registrada con éxito, stock actualizado"}
+    except BibliotecaError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/usuarios/{id_usuario}")
+def update_usuario(id_usuario: int, usuario_in: UsuarioCreate):
+    """Modifica un miembro existente."""
+    try:
+        UsuarioService.modificar_usuario(
+            id_usuario=id_usuario,
+            nombre=usuario_in.nombre,
+            correo=usuario_in.correo,
+            dni=usuario_in.dni
+        )
+        return {"status": "ok", "message": "Miembro actualizado con éxito"}
+    except BibliotecaError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/usuarios/{id_usuario}")
+def delete_usuario(id_usuario: int):
+    """Elimina un miembro del sistema si no tiene préstamos activos."""
+    try:
+        UsuarioService.eliminar_usuario(id_usuario)
+        return {"status": "ok", "message": "Miembro eliminado con éxito"}
+    except BibliotecaError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/libros/{isbn}")
+def delete_libro(isbn: str):
+    """Elimina un libro del catálogo si no tiene préstamos activos."""
+    try:
+        LibroService.eliminar_libro(isbn)
+        return {"status": "ok", "message": "Libro eliminado con éxito"}
     except BibliotecaError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

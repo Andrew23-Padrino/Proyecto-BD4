@@ -78,5 +78,43 @@ class TestLibraryService(unittest.TestCase):
         self.assertIn("no puede ser mayor al año actual", str(ctx.exception))
 
 
+    @patch('services.usuario_service.DatabaseConnection')
+    def test_eliminar_usuario_con_prestamo_activo(self, mock_db_conn):
+        """Valida que se lance UsuarioConPrestamoActivoError al intentar eliminar un usuario con préstamo activo."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db_conn.return_value.__enter__.return_value = (mock_conn, mock_cursor)
+        
+        # Simular que buscar_por_id encuentra el usuario
+        mock_cursor.fetchone.side_effect = [
+            {"id": 1, "nombre": "Carlos Perez", "correo": "carlos@correo.com", "dni": "123"}, # retorno buscar_por_id
+            {"id": 10} # retorno consulta prestamos activos (encontrado préstamo ID 10)
+        ]
+        
+        from services.usuario_service import UsuarioService
+        from services.exceptions import UsuarioConPrestamoActivoError
+        
+        with self.assertRaises(UsuarioConPrestamoActivoError):
+            UsuarioService.eliminar_usuario(1)
+
+    @patch('services.libro_service.DatabaseConnection')
+    def test_eliminar_libro_con_prestamo_activo(self, mock_db_conn):
+        """Valida que se lance LibroConPrestamoActivoError al intentar eliminar un libro con préstamo activo."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db_conn.return_value.__enter__.return_value = (mock_conn, mock_cursor)
+        
+        # Simular que buscar_por_isbn encuentra el libro
+        mock_cursor.fetchone.side_effect = [
+            {"isbn": "978-3-16-148410-0", "titulo": "El Quijote", "autor": "Cervantes", "anio_publicacion": 1605, "cantidad_disponible": 5}, # retorno buscar_por_isbn
+            {"id": 10} # retorno consulta prestamos activos
+        ]
+        
+        from services.exceptions import LibroConPrestamoActivoError
+        
+        with self.assertRaises(LibroConPrestamoActivoError):
+            LibroService.eliminar_libro("978-3-16-148410-0")
+
+
 if __name__ == '__main__':
     unittest.main()

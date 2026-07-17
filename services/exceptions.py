@@ -29,3 +29,15 @@ class PrestamoNoEncontradoError(BibliotecaError):
 class PrestamoYaDevueltoError(BibliotecaError):
     """Se lanza cuando se intenta devolver un préstamo que ya fue cerrado/devuelto."""
     pass
+
+class UsuarioConPrestamoActivoError(BibliotecaError):
+    """Se lanza al intentar eliminar un usuario que tiene préstamos activos sin devolver."""
+    pass
+
+class LibroConPrestamoActivoError(BibliotecaError):
+    """Se lanza al intentar eliminar un libro que tiene préstamos activos sin devolver."""
+    pass
+
+class DNIDuplicadoError(BibliotecaError):
+    """Se lanza al intentar registrar o modificar un usuario con un DNI que ya existe."""
+    pass

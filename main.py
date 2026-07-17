@@ -22,7 +22,10 @@ def menu_principal():
     print("  7. Registrar devolución de un libro")
     print("  8. Listar préstamos activos")
     print("  9. Ver historial completo de préstamos")
-    print(" 10. Inicializar / Re-crear base de datos")
+    print(" 10. Modificar datos de un miembro (DNI/Nombre/Correo)")
+    print(" 11. Eliminar un miembro")
+    print(" 12. Eliminar un libro del catálogo")
+    print(" 13. Inicializar / Re-crear base de datos")
     print("  0. Salir de la aplicación")
     print("=" * 50)
 
@@ -113,7 +116,12 @@ def registrar_usuario_cli():
         print("[ERROR] El correo electrónico es obligatorio.")
         return
         
-    usuario = Usuario(nombre, correo)
+    dni = input("Cédula/DNI único: ").strip()
+    if not dni:
+        print("[ERROR] La cédula/DNI es obligatoria.")
+        return
+        
+    usuario = Usuario(nombre, correo, dni)
     try:
         nuevo_id = UsuarioService.registrar_usuario(usuario)
         print(f"\n[ÉXITO] Miembro '{nombre}' registrado. ID asignado: {nuevo_id}")
@@ -165,6 +173,33 @@ def registrar_prestamo_cli():
     try:
         id_prestamo = PrestamoService.registrar_prestamo(id_usuario, isbn, dias_prestamo)
         print(f"\n[ÉXITO] Préstamo creado exitosamente con el ID: {id_prestamo}")
+        
+        # Obtener los datos del préstamo e información del miembro para el ticket de recibo
+        prestamos = PrestamoService.listar_prestamos(solo_activos=False)
+        p = next((x for x in prestamos if x["id"] == id_prestamo), None)
+        usuario = UsuarioService.buscar_por_id(id_usuario)
+        
+        if p and usuario:
+            f_prest = p['fecha_prestamo'].strftime('%Y-%m-%d %H:%M') if hasattr(p['fecha_prestamo'], 'strftime') else str(p['fecha_prestamo'])
+            f_venc = p['fecha_devolucion_esperada'].strftime('%Y-%m-%d') if hasattr(p['fecha_devolucion_esperada'], 'strftime') else str(p['fecha_devolucion_esperada'])
+            
+            ticket = f"""
++--------------------------------------------------------+
+|                 TICKET DE PRÉSTAMO                     |
++--------------------------------------------------------+
+| Folio Préstamo: #{id_prestamo:<38} |
+| Miembro:        {p['nombre_usuario'][:38]:<38} |
+| ID Miembro:     {p['id_usuario']:<38} |
+| DNI/Cédula:     {usuario.dni[:38]:<38} |
+| Libro / Título: {p['titulo_libro'][:38]:<38} |
+| ISBN Libro:     {p['isbn']:<38} |
+| Fecha Salida:   {f_prest:<38} |
+| Fecha Venc.:    {f_venc:<38} |
++--------------------------------------------------------+
+|    ¡Conserve este comprobante para su devolución!      |
++--------------------------------------------------------+
+"""
+            print(ticket)
     except BibliotecaError as e:
         print(f"\n[ERROR] {e}")
     except Exception as e:
@@ -210,6 +245,78 @@ def listar_prestamos_cli(solo_activos=False):
     except Exception as e:
         print(f"\n[ERROR INESPERADO] No se pudo obtener la lista de préstamos: {e}")
 
+def modificar_usuario_cli():
+    print("\n--- MODIFICAR DATOS DE MIEMBRO ---")
+    try:
+        id_usuario = int(input("Ingrese el ID del miembro a modificar: ").strip())
+    except ValueError:
+        print("[ERROR] El ID debe ser un número entero.")
+        return
+        
+    try:
+        usuario = UsuarioService.buscar_por_id(id_usuario)
+        print(f"\nDatos actuales: DNI: {usuario.dni} | Nombre: {usuario.nombre} | Correo: {usuario.correo}")
+        
+        nombre = input(f"Nuevo nombre (dejar vacío para mantener '{usuario.nombre}'): ").strip()
+        if not nombre:
+            nombre = usuario.nombre
+            
+        correo = input(f"Nuevo correo (dejar vacío para mantener '{usuario.correo}'): ").strip()
+        if not correo:
+            correo = usuario.correo
+            
+        dni = input(f"Nuevo DNI/cédula (dejar vacío para mantener '{usuario.dni}'): ").strip()
+        if not dni:
+            dni = usuario.dni
+            
+        UsuarioService.modificar_usuario(id_usuario, nombre, correo, dni)
+        print(f"\n[ÉXITO] Datos del miembro actualizados con éxito.")
+    except BibliotecaError as e:
+        print(f"\n[ERROR] {e}")
+    except Exception as e:
+        print(f"\n[ERROR INESPERADO] {e}")
+
+def eliminar_usuario_cli():
+    print("\n--- ELIMINAR MIEMBRO ---")
+    try:
+        id_usuario = int(input("Ingrese el ID del miembro a eliminar: ").strip())
+    except ValueError:
+        print("[ERROR] El ID debe ser un número entero.")
+        return
+        
+    try:
+        usuario = UsuarioService.buscar_por_id(id_usuario)
+        confirmar = input(f"¿Está seguro de eliminar al miembro '{usuario.nombre}' (ID: {id_usuario})? (s/n): ").strip().lower()
+        if confirmar == 's':
+            UsuarioService.eliminar_usuario(id_usuario)
+            print(f"\n[ÉXITO] El miembro ha sido eliminado del sistema.")
+        else:
+            print("\nOperación cancelada.")
+    except BibliotecaError as e:
+        print(f"\n[ERROR] {e}")
+    except Exception as e:
+        print(f"\n[ERROR INESPERADO] {e}")
+
+def eliminar_libro_cli():
+    print("\n--- ELIMINAR LIBRO ---")
+    isbn = input("Ingrese el ISBN del libro a eliminar: ").strip()
+    if not isbn:
+        print("[ERROR] El ISBN es obligatorio.")
+        return
+        
+    try:
+        libro = LibroService.buscar_por_isbn(isbn)
+        confirmar = input(f"¿Está seguro de eliminar el libro '{libro.titulo}' (ISBN: {isbn})? (s/n): ").strip().lower()
+        if confirmar == 's':
+            LibroService.eliminar_libro(isbn)
+            print(f"\n[ÉXITO] El libro ha sido eliminado del catálogo.")
+        else:
+            print("\nOperación cancelada.")
+    except BibliotecaError as e:
+        print(f"\n[ERROR] {e}")
+    except Exception as e:
+        print(f"\n[ERROR INESPERADO] {e}")
+
 def main():
     print("Cargando Sistema de Gestión de Biblioteca...")
     
@@ -250,6 +357,12 @@ def main():
         elif opcion == "9":
             listar_prestamos_cli(solo_activos=False)
         elif opcion == "10":
+            modificar_usuario_cli()
+        elif opcion == "11":
+            eliminar_usuario_cli()
+        elif opcion == "12":
+            eliminar_libro_cli()
+        elif opcion == "13":
             confirmar = input("\n[ATENCIÓN] ¿Está seguro de que desea (re)inicializar la base de datos?\n"
                                "Esto eliminará todas las tablas e información existente. (s/n): ").strip().lower()
             if confirmar == 's':
@@ -258,7 +371,7 @@ def main():
             print("\nSaliendo del sistema. ¡Que tenga un excelente día!")
             sys.exit(0)
         else:
-            print("\n[ERROR] Opción no reconocida. Por favor, intente del 0 al 10.")
+            print("\n[ERROR] Opción no reconocida. Por favor, intente del 0 al 13.")
             
         input("\nPresione Enter para continuar...")
 

@@ -1,6 +1,5 @@
 pymysql
 cryptography
 python-dotenv
-flet
 fastapi
 uvicorn

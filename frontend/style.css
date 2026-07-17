@@ -1140,3 +1140,83 @@ form select:focus {
 .login-actions .btn {
     width: 47%;
 }
+
+/* ==========================================================================
+   TICKET / COMPROBANTE DE PRÉSTAMO
+   ========================================================================== */
+
+.ticket-modal {
+    max-width: 450px !important;
+}
+
+.ticket-container {
+    background-color: var(--bg-card);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-color);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.ticket-header {
+    text-align: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.ticket-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.ticket-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.ticket-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ticket-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+    padding-bottom: 8px;
+}
+
+.ticket-row:last-child {
+    border-bottom: none;
+}
+
+.ticket-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.ticket-value {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    font-weight: 600;
+    text-align: right;
+}
+
+.ticket-footer {
+    text-align: center;
+    margin-top: 15px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+    font-size: 0.8rem;
+    color: var(--success);
+    font-weight: 700;
+}

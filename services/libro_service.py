@@ -2,7 +2,7 @@ import pymysql
 import datetime
 from database.connection import DatabaseConnection
 from models.libro import Libro
-from services.exceptions import LibroDuplicadoError, LibroNoEncontradoError, BibliotecaError
+from services.exceptions import LibroDuplicadoError, LibroNoEncontradoError, BibliotecaError, LibroConPrestamoActivoError
 
 class LibroService:
     """Clase encargada del CRUD y la lógica de negocio asociada a los Libros."""
@@ -79,3 +79,29 @@ class LibroService:
             cursor.execute(query)
             rows = cursor.fetchall()
             return [Libro.from_dict(row) for row in rows]
+
+    @staticmethod
+    def eliminar_libro(isbn: str) -> bool:
+        """
+        Elimina un libro si no tiene préstamos activos.
+        Lanza LibroNoEncontradoError si el ISBN no existe.
+        Lanza LibroConPrestamoActivoError si tiene préstamos activos.
+        """
+        # Verificar existencia
+        LibroService.buscar_por_isbn(isbn)
+
+        with DatabaseConnection() as (conn, cursor):
+            # 1. Verificar si tiene préstamos activos
+            cursor.execute("SELECT id FROM prestamos WHERE isbn = %s AND estado = 'Activo'", (isbn,))
+            if cursor.fetchone():
+                raise LibroConPrestamoActivoError(
+                    f"No se puede eliminar el libro con ISBN '{isbn}' porque tiene préstamos activos sin devolver."
+                )
+
+            # 2. Eliminar préstamos devueltos históricos asociados
+            cursor.execute("DELETE FROM prestamos WHERE isbn = %s AND estado = 'Devuelto'", (isbn,))
+
+            # 3. Eliminar el libro
+            cursor.execute("DELETE FROM libros WHERE isbn = %s", (isbn,))
+            conn.commit()
+            return True

@@ -8,9 +8,15 @@ COLLATE utf8mb4_unicode_ci;
 
 USE biblioteca_db;
 
+-- Eliminar tablas si existen para permitir la re-inicialización limpia
+DROP TABLE IF EXISTS prestamos;
+DROP TABLE IF EXISTS usuarios;
+DROP TABLE IF EXISTS libros;
+
 -- 1. TABLA: usuarios
 CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    dni VARCHAR(20) NOT NULL UNIQUE,
     nombre VARCHAR(100) NOT NULL,
     correo VARCHAR(100) NOT NULL UNIQUE,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -56,19 +56,19 @@ sequenceDiagram
 
 ## 3. ¿Cómo Ejecutar el Sistema?
 
-### A. Opción 1: Aplicación de Escritorio (Flet)
-1.  Asegúrate de que tu base de datos MySQL local esté encendida.
-2.  Ejecuta el archivo gráfico:
-    ```bash
-    python gui.py
-    ```
-3.  Se abrirá una ventana de escritorio donde podrás elegir tu rol e ingresar.
+### A. Opción 1: Aplicación Web (FastAPI + HTML)
+1. Inicia el servidor web ejecutando:
+   ```bash
+   python app.py
+   ```
+2. Abre tu navegador de preferencia y dirígete a:
+   `http://127.0.0.1:8000`
+3. Interactúa con la interfaz web SPA integrada.
 
-### B. Opción 2: Aplicación Web (FastAPI + HTML)
-1.  Inicia el servidor web ejecutando:
-    ```bash
-    python app.py
-    ```
-2.  Abre tu navegador de preferencia y dirígete a:
-    `http://127.0.0.1:8000`
-3.  Interactúa con la interfaz web SPA integrada.
+### B. Opción 2: Cliente de Consola (CLI)
+1. Asegúrate de tener activa tu base de datos MySQL local.
+2. Inicia el cliente interactivo desde la terminal:
+   ```bash
+   python main.py
+   ```
+3. Navega por las opciones utilizando el menú en texto.
