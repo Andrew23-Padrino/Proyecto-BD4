@@ -132,3 +132,88 @@ Raíz del Proyecto/
     En lugar de retornar códigos numéricos oscuros de error o cadenas de texto, la capa de servicios lanza excepciones semánticas como `SinStockError`. La capa de presentación las atrapa y las muestra de forma amigable (un Toast rojo en la web, un SnackBar en Flet, o un mensaje `[ERROR]` en la terminal).
 3.  **Seguridad y Contextualización de la BD (connection.py)**:
     La clase `DatabaseConnection` encapsula el control de conexiones y transacciones. Esto previene fugas de recursos (conexiones abiertas) e inconsistencias al obligar a realizar un `rollback()` si un servicio lanza una excepción a mitad del proceso.
+
+---
+
+## 3. Diagrama de Arquitectura Multicapa
+
+A continuación se presenta el diagrama de componentes y flujo de llamadas del sistema a través de las capas de diseño:
+
+```mermaid
+flowchart TD
+    subgraph Capa_UI [Capa de Interfaz de Usuario / Presentación]
+        direction LR
+        Web[Web SPA: HTML5 / CSS3 / Vanilla JS]
+        Flet[Escritorio Nativo: Flet GUI]
+        CLI[Consola Interactiva: Python CLI]
+    end
+
+    subgraph Capa_Controladores [Capa de Control / Enrutamiento]
+        API[API REST: FastAPI - app.py]
+        GUI_Ctrl[Controlador Flet: gui.py]
+        CLI_Ctrl[Controlador CLI: main.py]
+    end
+
+    subgraph Capa_Servicios [Capa de Lógica de Negocio - Services]
+        LibroSrv[LibroService]
+        UsuarioSrv[UsuarioService]
+        PrestamoSrv[PrestamoService]
+        Excs[Excepciones Personalizadas: exceptions.py]
+    end
+
+    subgraph Capa_Modelos [Capa de Modelos de Dominio]
+        M_Libro[Modelo Libro]
+        M_Usuario[Modelo Usuario]
+        M_Prestamo[Modelo Prestamo]
+    end
+
+    subgraph Capa_Datos [Capa de Acceso a Datos - Data Access]
+        DBConn[DatabaseConnection - connection.py]
+    end
+
+    subgraph Capa_Persistencia [Capa de Persistencia Física]
+        MySQL[(Base de Datos: MySQL)]
+    end
+
+    %% Relaciones de llamada de arriba a abajo
+    Web -->|Peticiones HTTP Fetch / JSON| API
+    API --> LibroSrv
+    API --> UsuarioSrv
+    API --> PrestamoSrv
+
+    Flet -->|Llamadas Directas de Evento| GUI_Ctrl
+    GUI_Ctrl --> LibroSrv
+    GUI_Ctrl --> UsuarioSrv
+    GUI_Ctrl --> PrestamoSrv
+
+    CLI -->|Entrada por Terminal| CLI_Ctrl
+    CLI_Ctrl --> LibroSrv
+    CLI_Ctrl --> UsuarioSrv
+    CLI_Ctrl --> PrestamoSrv
+
+    %% Relaciones con la capa de modelos
+    LibroSrv .-> M_Libro
+    UsuarioSrv .-> M_Usuario
+    PrestamoSrv .-> M_Prestamo
+
+    %% Acceso a Datos
+    LibroSrv --> DBConn
+    UsuarioSrv --> DBConn
+    PrestamoSrv --> DBConn
+
+    DBConn -->|Protocolo TCP/IP MySQL| MySQL
+
+    %% Estilos de color para diseño responsivo moderno
+    style Web fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1
+    style Flet fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#15803d
+    style CLI fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#374151
+
+    style API fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#7e22ce
+    style GUI_Ctrl fill:#fdf2f8,stroke:#db2777,stroke-width:2px,color:#be185d
+    style CLI_Ctrl fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#b45309
+
+    style Capa_Servicios fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style Capa_Modelos fill:#fdf4ff,stroke:#c084fc,stroke-width:1px,stroke-dasharray: 5 5
+    style Capa_Datos fill:#ecfdf5,stroke:#059669,stroke-width:2px
+    style MySQL fill:#fff7ed,stroke:#ea580c,stroke-width:3px,color:#c2410c
+```
