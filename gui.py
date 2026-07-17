@@ -444,10 +444,10 @@ def main(page: ft.Page):
 
         metrics_grid = ft.ResponsiveRow(
             controls=[
-                ft.Column([metric_card("Catálogo de Libros", str(tot_libros), ft.icons.BOOKMARK_ROUNDED, get_color("accent"), "Títulos registrados")], col={"sm": 12, "md": 6, "lg": 3}),
-                ft.Column([metric_card("Stock Disponible", str(stock_total), ft.icons.INVENTORY_ROUNDED, get_color("success"), "Ejemplares físicos")], col={"sm": 12, "md": 6, "lg": 3}),
-                ft.Column([metric_card("Miembros Activos", str(tot_usuarios), ft.icons.PEOPLE_ALT_ROUNDED, get_color("warning"), "Usuarios en biblioteca")], col={"sm": 12, "md": 6, "lg": 3}),
-                ft.Column([metric_card("Préstamos Pendientes", str(prest_activos), ft.icons.AUTORENEW_ROUNDED, get_color("danger"), "Libros fuera de sala")], col={"sm": 12, "md": 6, "lg": 3})
+                ft.Column([metric_card("Catálogo de Libros", str(tot_libros), ft.Icons.BOOKMARK_ROUNDED, get_color("accent"), "Títulos registrados")], col={"sm": 12, "md": 6, "lg": 3}),
+                ft.Column([metric_card("Stock Disponible", str(stock_total), ft.Icons.INVENTORY_ROUNDED, get_color("success"), "Ejemplares físicos")], col={"sm": 12, "md": 6, "lg": 3}),
+                ft.Column([metric_card("Miembros Activos", str(tot_usuarios), ft.Icons.PEOPLE_ALT_ROUNDED, get_color("warning"), "Usuarios en biblioteca")], col={"sm": 12, "md": 6, "lg": 3}),
+                ft.Column([metric_card("Préstamos Pendientes", str(prest_activos), ft.Icons.AUTORENEW_ROUNDED, get_color("danger"), "Libros fuera de sala")], col={"sm": 12, "md": 6, "lg": 3})
             ],
             spacing=20
         )
@@ -471,7 +471,7 @@ def main(page: ft.Page):
                         content=ft.Row(
                             [
                                 ft.Row([
-                                    ft.Icon(ft.icons.ARROW_FORWARD_ROUNDED, color=get_color("accent"), size=16),
+                                    ft.Icon(ft.Icons.ARROW_FORWARD_ROUNDED, color=get_color("accent"), size=16),
                                     ft.Text(f"{pl['nombre_usuario']} solicitó '{pl['titulo_libro']}'", weight=ft.FontWeight.W_500, color=get_color("text")),
                                 ]),
                                 ft.Row([
@@ -517,7 +517,7 @@ def main(page: ft.Page):
                             ft.Text("Resumen general del estado e inventario de la biblioteca.", color=get_color("text_muted"), size=14)
                         ]),
                         ft.IconButton(
-                            icon=ft.icons.REFRESH_ROUNDED,
+                            icon=ft.Icons.REFRESH_ROUNDED,
                             icon_color=get_color("accent"),
                             on_click=lambda _: [cargar_datos(), navegar_a("dashboard")],
                             tooltip="Sincronizar datos"
@@ -539,7 +539,7 @@ def main(page: ft.Page):
         expand=True,
         border_radius=8,
         border_color="#3b82f6",
-        prefix_icon=ft.icons.SEARCH,
+        prefix_icon=ft.Icons.SEARCH,
         content_padding=12
     )
 
@@ -625,7 +625,7 @@ def main(page: ft.Page):
                         ]),
                         ft.ElevatedButton(
                             "Agregar Libro",
-                            icon=ft.icons.ADD,
+                            icon=ft.Icons.ADD,
                             on_click=lambda _: setattr(modal_libro, "open", True) or page.update(),
                             bgcolor="#3b82f6",
                             color="#ffffff"
@@ -648,7 +648,7 @@ def main(page: ft.Page):
         expand=True,
         border_radius=8,
         border_color="#10b981",
-        prefix_icon=ft.icons.SEARCH,
+        prefix_icon=ft.Icons.SEARCH,
         content_padding=12
     )
 
@@ -724,7 +724,7 @@ def main(page: ft.Page):
                         ]),
                         ft.ElevatedButton(
                             "Nuevo Miembro",
-                            icon=ft.icons.PERSON_ADD_ROUNDED,
+                            icon=ft.Icons.PERSON_ADD_ROUNDED,
                             on_click=lambda _: setattr(modal_usuario, "open", True) or page.update(),
                             bgcolor="#10b981",
                             color="#ffffff"
@@ -798,7 +798,7 @@ def main(page: ft.Page):
                     ft.DataCell(
                         ft.ElevatedButton(
                             "Devolver",
-                            icon=ft.icons.KEYBOARD_RETURN_ROUNDED,
+                            icon=ft.Icons.KEYBOARD_RETURN_ROUNDED,
                             bgcolor=get_color("success"),
                             color="#ffffff",
                             small=True,
@@ -869,7 +869,7 @@ def main(page: ft.Page):
                         ]),
                         ft.ElevatedButton(
                             "Nuevo Préstamo",
-                            icon=ft.icons.SEND_ROUNDED,
+                            icon=ft.Icons.SEND_ROUNDED,
                             on_click=abrir_modal_prestamo,
                             bgcolor="#3b82f6",
                             color="#ffffff"
@@ -924,7 +924,7 @@ def main(page: ft.Page):
         # Actualizar colores
         page.bgcolor = get_color("bg")
         sidebar_container.bgcolor = get_color("sidebar")
-        btn_theme.icon = ft.icons.LIGHT_MODE_ROUNDED if page.theme_mode == ft.ThemeMode.DARK else ft.icons.DARK_MODE_ROUNDED
+        btn_theme.icon = ft.Icons.LIGHT_MODE_ROUNDED if page.theme_mode == ft.ThemeMode.DARK else ft.Icons.DARK_MODE_ROUNDED
         btn_theme.tooltip = "Cambiar a Modo Claro" if page.theme_mode == ft.ThemeMode.DARK else "Cambiar a Modo Oscuro"
         
         # Refrescar vista actual para aplicar la paleta
@@ -945,13 +945,13 @@ def main(page: ft.Page):
             animate=ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT)
         )
 
-    btn_dash = crear_btn_sidebar("Dashboard", ft.icons.DASHBOARD_ROUNDED, lambda _: navegar_a("dashboard"))
-    btn_books = crear_btn_sidebar("Libros / Catálogo", ft.icons.BOOK_ROUNDED, lambda _: navegar_a("libros"))
-    btn_users = crear_btn_sidebar("Usuarios / Miembros", ft.icons.PEOPLE_ROUNDED, lambda _: navegar_a("usuarios"))
-    btn_loans = crear_btn_sidebar("Préstamos y Devolución", ft.icons.SWAP_HORIZ_ROUNDED, lambda _: navegar_a("prestamos"))
+    btn_dash = crear_btn_sidebar("Dashboard", ft.Icons.DASHBOARD_ROUNDED, lambda _: navegar_a("dashboard"))
+    btn_books = crear_btn_sidebar("Libros / Catálogo", ft.Icons.BOOK_ROUNDED, lambda _: navegar_a("libros"))
+    btn_users = crear_btn_sidebar("Usuarios / Miembros", ft.Icons.PEOPLE_ROUNDED, lambda _: navegar_a("usuarios"))
+    btn_loans = crear_btn_sidebar("Préstamos y Devolución", ft.Icons.SWAP_HORIZ_ROUNDED, lambda _: navegar_a("prestamos"))
     
     btn_theme = ft.IconButton(
-        icon=ft.icons.LIGHT_MODE_ROUNDED,
+        icon=ft.Icons.LIGHT_MODE_ROUNDED,
         icon_color=get_color("accent"),
         on_click=cambiar_tema,
         tooltip="Cambiar a Modo Claro"
@@ -967,7 +967,7 @@ def main(page: ft.Page):
                 ft.Container(
                     content=ft.Row(
                         [
-                            ft.Icon(ft.icons.LIBRARY_BOOKS_ROUNDED, color="#3b82f6", size=30),
+                            ft.Icon(ft.Icons.LIBRARY_BOOKS_ROUNDED, color="#3b82f6", size=30),
                             ft.Text("MiBiblioteca", size=22, weight=ft.FontWeight.BOLD, color=get_color("text"))
                         ],
                         alignment=ft.MainAxisAlignment.CENTER

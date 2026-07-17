@@ -18,21 +18,21 @@ app = FastAPI(title="Biblioteca API", description="API REST para el Sistema de G
 # MODELOS DE ENTRADA (PYDANTIC SCHEMAS)
 # -------------------------------------------------------------
 class LibroCreate(BaseModel):
-    isbn: str = Field(..., example="978-3-16-148410-0")
-    titulo: str = Field(..., example="El Quijote")
-    autor: str = Field(..., example="Miguel de Cervantes")
-    anio_publicacion: int = Field(..., example=1605)
-    cantidad_disponible: int = Field(..., gte=0, example=5)
-    categoria: str = Field(default="Sin Categoría", example="Novela")
+    isbn: str = Field(..., json_schema_extra={"example": "978-3-16-148410-0"})
+    titulo: str = Field(..., json_schema_extra={"example": "El Quijote"})
+    autor: str = Field(..., json_schema_extra={"example": "Miguel de Cervantes"})
+    anio_publicacion: int = Field(..., json_schema_extra={"example": 1605})
+    cantidad_disponible: int = Field(..., gte=0, json_schema_extra={"example": 5})
+    categoria: str = Field(default="Sin Categoría", json_schema_extra={"example": "Novela"})
 
 class UsuarioCreate(BaseModel):
-    nombre: str = Field(..., example="Juan Perez")
-    correo: str = Field(..., example="juan@example.com")
+    nombre: str = Field(..., json_schema_extra={"example": "Juan Perez"})
+    correo: str = Field(..., json_schema_extra={"example": "juan@example.com"})
 
 class PrestamoCreate(BaseModel):
-    id_usuario: int = Field(..., example=1)
-    isbn: str = Field(..., example="978-3-16-148410-0")
-    dias_prestamo: int = Field(default=7, gt=0, example=7)
+    id_usuario: int = Field(..., json_schema_extra={"example": 1})
+    isbn: str = Field(..., json_schema_extra={"example": "978-3-16-148410-0"})
+    dias_prestamo: int = Field(default=7, gt=0, json_schema_extra={"example": 7})
 
 
 # -------------------------------------------------------------
@@ -214,4 +214,4 @@ app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 # Ejecutar el servidor Uvicorn si se corre el archivo directamente
 if __name__ == "__main__":
     print("Iniciando Servidor Web en http://127.0.0.1:8000")
-    uvicorn.run("app.py:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
