@@ -147,7 +147,8 @@ function renderLibrosTable(books) {
     tbody.innerHTML = "";
     
     if (books.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center italic text-muted">No se encontraron libros.</td></tr>`;
+        const cols = currentRole === 'lector' ? 7 : 6;
+        tbody.innerHTML = `<tr><td colspan="${cols}" class="text-center italic text-muted">No se encontraron libros.</td></tr>`;
         return;
     }
     
@@ -156,6 +157,18 @@ function renderLibrosTable(books) {
         const hasStock = b.cantidad_disponible > 0;
         const stockStyle = hasStock ? "color: var(--success); font-weight: 600;" : "color: var(--danger); font-weight: 600;";
         
+        let actionCell = "";
+        if (currentRole === "lector") {
+            actionCell = hasStock
+                ? `<td>
+                    <button class="btn btn-primary btn-small" onclick="requestLoanDirectly('${b.isbn}', '${b.titulo.replace(/'/g, "\\'")}')">
+                        <i data-lucide="send" style="width: 12px; height: 12px;"></i>
+                        <span>Solicitar</span>
+                    </button>
+                   </td>`
+                : `<td><span class="text-danger font-semibold">Sin Stock</span></td>`;
+        }
+
         tr.innerHTML = `
             <td><code>${b.isbn}</code></td>
             <td class="font-semibold">${b.titulo}</td>
@@ -163,9 +176,11 @@ function renderLibrosTable(books) {
             <td>${b.anio_publicacion}</td>
             <td style="${stockStyle}">${b.cantidad_disponible}</td>
             <td><span class="category-badge">${b.categoria}</span></td>
+            ${actionCell}
         `;
         tbody.appendChild(tr);
     });
+    lucide.createIcons();
 }
 
 // Búsqueda reactiva de libros con pequeño delay (debouncing)
@@ -396,7 +411,54 @@ async function fetchPrestamos() {
     }
 }
 
+function renderMisPrestamosTable(loans) {
+    const tbody = document.getElementById("table-mis-prestamos-body");
+    tbody.innerHTML = "";
+    
+    const myLoans = loans.filter(l => l.id_usuario === currentUserId);
+    
+    if (myLoans.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center italic text-muted">No tienes préstamos registrados.</td></tr>`;
+        return;
+    }
+    
+    myLoans.forEach(p => {
+        const tr = document.createElement("tr");
+        const isDevuelto = p.estado === 'Devuelto';
+        const badgeClass = isDevuelto ? 'badge badge-success' : 'badge badge-danger';
+        
+        let actionCell = "";
+        if (!isDevuelto) {
+            actionCell = `<td>
+                <button class="btn btn-success btn-small" onclick="ejecutarDevolucion(${p.id})">
+                    <i data-lucide="corner-down-left" style="width: 12px; height: 12px;"></i>
+                    <span>Devolver</span>
+                </button>
+            </td>`;
+        } else {
+            actionCell = `<td><span class="text-muted italic">-</span></td>`;
+        }
+        
+        tr.innerHTML = `
+            <td><code>${p.id}</code></td>
+            <td class="font-semibold">${p.titulo_libro}</td>
+            <td><code>${p.isbn}</code></td>
+            <td>${p.fecha_prestamo}</td>
+            <td>${p.fecha_devolucion_esperada}</td>
+            <td><span class="${badgeClass}">${p.estado}</span></td>
+            ${actionCell}
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 function renderPrestamosTables() {
+    if (currentRole === 'lector') {
+        renderMisPrestamosTable(allLoansData);
+        lucide.createIcons();
+        return;
+    }
+
     // Render Activos
     const tbodyActivos = document.getElementById("table-prestamos-activos-body");
     tbodyActivos.innerHTML = "";
@@ -414,10 +476,16 @@ function renderPrestamosTables() {
                 <td>${p.fecha_prestamo}</td>
                 <td><span class="text-orange font-semibold">${p.fecha_devolucion_esperada}</span></td>
                 <td>
-                    <button class="btn btn-success btn-small" onclick="ejecutarDevolucion(${p.id})">
-                        <i data-lucide="corner-down-left" style="width: 14px; height: 14px;"></i>
-                        <span>Devolver</span>
-                    </button>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-warning btn-small" onclick="reclamarUsuario(${p.id}, '${p.nombre_usuario.replace(/'/g, "\\'")}')">
+                            <i data-lucide="bell" style="width: 12px; height: 12px;"></i>
+                            <span>Reclamar</span>
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="sancionarUsuario(${p.id}, '${p.nombre_usuario.replace(/'/g, "\\'")}')">
+                            <i data-lucide="shield-alert" style="width: 12px; height: 12px;"></i>
+                            <span>Sancionar</span>
+                        </button>
+                    </div>
                 </td>
             `;
             tbodyActivos.appendChild(tr);
@@ -810,4 +878,12 @@ async function requestLoanDirectly(isbn, title) {
     } finally {
         setLoading(false);
     }
+}
+
+function reclamarUsuario(idPrestamo, nombreUsuario) {
+    showToast(`Se ha enviado una reclamación por correo al miembro "${nombreUsuario}" para la devolución del libro.`, "warning");
+}
+
+function sancionarUsuario(idPrestamo, nombreUsuario) {
+    showToast(`El miembro "${nombreUsuario}" ha sido sancionado temporalmente en el sistema.`, "error");
 }

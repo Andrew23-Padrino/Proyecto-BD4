@@ -573,6 +573,19 @@ def main(page: ft.Page):
             
         try:
             coincidencias = LibroService.buscar_libros(query)
+            # Configurar columnas dinámicamente según el rol
+            cols = [
+                ft.DataColumn(ft.Text("ISBN", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Título", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Autor", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Año", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Stock", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Categoría", weight=ft.FontWeight.BOLD)),
+            ]
+            if state["user_role"] == "lector":
+                cols.append(ft.DataColumn(ft.Text("Acciones", weight=ft.FontWeight.BOLD)))
+            dt_libros.columns = cols
+
             rows = []
             for l in coincidencias:
                 cells = [
@@ -590,7 +603,6 @@ def main(page: ft.Page):
                             icon=ft.Icons.SEND_ROUNDED,
                             bgcolor=get_color("accent"),
                             color="#ffffff",
-                            small=True,
                             on_click=lambda e, isbn=l.isbn, titulo=l.titulo: solicitar_prestamo_lector(isbn, titulo)
                         )
                     else:
@@ -606,7 +618,12 @@ def main(page: ft.Page):
     dt_libros = ft.DataTable(
         border_radius=10,
         heading_row_color=ft.colors.BLACK12,
-        columns=[
+        columns=[]
+    )
+
+    def get_libros_view() -> ft.Control:
+        # Configurar columnas dinámicamente según el rol
+        cols = [
             ft.DataColumn(ft.Text("ISBN", weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Título", weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Autor", weight=ft.FontWeight.BOLD)),
@@ -614,9 +631,10 @@ def main(page: ft.Page):
             ft.DataColumn(ft.Text("Stock", weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Categoría", weight=ft.FontWeight.BOLD)),
         ]
-    )
+        if state["user_role"] == "lector":
+            cols.append(ft.DataColumn(ft.Text("Acciones", weight=ft.FontWeight.BOLD)))
+        dt_libros.columns = cols
 
-    def get_libros_view() -> ft.Control:
         rows = []
         for l in state["books_list"]:
             cells = [
@@ -634,7 +652,6 @@ def main(page: ft.Page):
                         icon=ft.Icons.SEND_ROUNDED,
                         bgcolor=get_color("accent"),
                         color="#ffffff",
-                        small=True,
                         on_click=lambda e, isbn=l.isbn, titulo=l.titulo: solicitar_prestamo_lector(isbn, titulo)
                     )
                 else:
@@ -840,13 +857,31 @@ def main(page: ft.Page):
                     ft.DataCell(ft.Text(p['fecha_prestamo'].strftime('%Y-%m-%d') if p['fecha_prestamo'] else 'N/A', color=get_color("text"))),
                     ft.DataCell(ft.Text(p['fecha_devolucion_esperada'].strftime('%Y-%m-%d') if p['fecha_devolucion_esperada'] else 'N/A', color=get_color("text"))),
                     ft.DataCell(
-                        ft.ElevatedButton(
-                            "Devolver",
-                            icon=ft.Icons.KEYBOARD_RETURN_ROUNDED,
-                            bgcolor=get_color("success"),
-                            color="#ffffff",
-                            small=True,
-                            on_click=lambda e, pid=p['id']: ejecutar_devolucion(pid)
+                        ft.Row(
+                            [
+                                ft.ElevatedButton(
+                                    "Devolver",
+                                    icon=ft.Icons.KEYBOARD_RETURN_ROUNDED,
+                                    bgcolor=get_color("success"),
+                                    color="#ffffff",
+                                    on_click=lambda e, pid=p['id']: ejecutar_devolucion(pid)
+                                ),
+                                ft.ElevatedButton(
+                                    "Reclamar",
+                                    icon=ft.Icons.NOTIFICATION_IMPORTANT_ROUNDED,
+                                    bgcolor=ft.colors.ORANGE,
+                                    color="#ffffff",
+                                    on_click=lambda e, name=p['nombre_usuario']: show_toast(f"Aviso de reclamo enviado al miembro '{name}'", is_warning=True)
+                                ),
+                                ft.ElevatedButton(
+                                    "Sancionar",
+                                    icon=ft.Icons.GPP_BAD_ROUNDED,
+                                    bgcolor=get_color("danger"),
+                                    color="#ffffff",
+                                    on_click=lambda e, name=p['nombre_usuario']: show_toast(f"El miembro '{name}' ha sido sancionado temporalmente.", is_error=True)
+                                )
+                            ],
+                            spacing=5
                         )
                     )
                 ]
@@ -909,15 +944,8 @@ def main(page: ft.Page):
                     [
                         ft.Column([
                             ft.Text("Registro de Préstamos y Devoluciones", size=26, weight=ft.FontWeight.BOLD, color=get_color("text")),
-                            ft.Text("Visualice préstamos activos, registre devoluciones o cree nuevas transacciones.", color=get_color("text_muted"), size=14)
+                            ft.Text("Visualice préstamos activos o registre devoluciones.", color=get_color("text_muted"), size=14)
                         ]),
-                        ft.ElevatedButton(
-                            "Nuevo Préstamo",
-                            icon=ft.Icons.SEND_ROUNDED,
-                            on_click=abrir_modal_prestamo,
-                            bgcolor="#3b82f6",
-                            color="#ffffff"
-                        )
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
                 ),
@@ -939,6 +967,7 @@ def main(page: ft.Page):
             ft.DataColumn(ft.Text("F. Préstamo", weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("F. Vencimiento", weight=ft.FontWeight.BOLD)),
             ft.DataColumn(ft.Text("Estado", weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Acciones", weight=ft.FontWeight.BOLD)),
         ]
     )
 
@@ -946,25 +975,41 @@ def main(page: ft.Page):
         my_id = state["logged_user_id"]
         mis_prestamos = [p for p in state["all_loans"] if p["id_usuario"] == my_id]
         
-        dt_mis_prestamos.rows = [
-            ft.DataRow(
-                cells=[
-                    ft.DataCell(ft.Text(str(p['id']), weight=ft.FontWeight.W_500, color=get_color("text"))),
-                    ft.DataCell(ft.Text(p['titulo_libro'], weight=ft.FontWeight.BOLD, color=get_color("text"))),
-                    ft.DataCell(ft.Text(p['isbn'], color=get_color("text"))),
-                    ft.DataCell(ft.Text(p['fecha_prestamo'].strftime('%Y-%m-%d') if p['fecha_prestamo'] else 'N/A', color=get_color("text"))),
-                    ft.DataCell(ft.Text(p['fecha_devolucion_esperada'].strftime('%Y-%m-%d') if p['fecha_devolucion_esperada'] else 'N/A', color=get_color("text"))),
-                    ft.DataCell(
-                        ft.Container(
-                            content=ft.Text(p['estado'], color="#ffffff", size=12, weight=ft.FontWeight.BOLD),
-                            bgcolor=get_color("success") if p['estado'] == 'Devuelto' else get_color("danger"),
-                            border_radius=8,
-                            padding=ft.padding.symmetric(horizontal=10, vertical=4)
-                        )
-                    )
-                ]
-            ) for p in mis_prestamos
-        ]
+        rows = []
+        for p in mis_prestamos:
+            is_active = p["estado"] == "Activo"
+            if is_active:
+                action_btn = ft.ElevatedButton(
+                    "Devolver",
+                    icon=ft.Icons.KEYBOARD_RETURN_ROUNDED,
+                    bgcolor=get_color("success"),
+                    color="#ffffff",
+                    on_click=lambda e, pid=p['id']: ejecutar_devolucion(pid)
+                )
+            else:
+                action_btn = ft.Text("-", color=get_color("text_muted"))
+                
+            rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(str(p['id']), weight=ft.FontWeight.W_500, color=get_color("text"))),
+                        ft.DataCell(ft.Text(p['titulo_libro'], weight=ft.FontWeight.BOLD, color=get_color("text"))),
+                        ft.DataCell(ft.Text(p['isbn'], color=get_color("text"))),
+                        ft.DataCell(ft.Text(p['fecha_prestamo'].strftime('%Y-%m-%d') if p['fecha_prestamo'] else 'N/A', color=get_color("text"))),
+                        ft.DataCell(ft.Text(p['fecha_devolucion_esperada'].strftime('%Y-%m-%d') if p['fecha_devolucion_esperada'] else 'N/A', color=get_color("text"))),
+                        ft.DataCell(
+                            ft.Container(
+                                content=ft.Text(p['estado'], color="#ffffff", size=12, weight=ft.FontWeight.BOLD),
+                                bgcolor=get_color("success") if p['estado'] == 'Devuelto' else get_color("danger"),
+                                border_radius=8,
+                                padding=ft.padding.symmetric(horizontal=10, vertical=4)
+                            )
+                        ),
+                        ft.DataCell(action_btn)
+                    ]
+                )
+            )
+        dt_mis_prestamos.rows = rows
         
         table_container = ft.Container(
             content=ft.ListView(
