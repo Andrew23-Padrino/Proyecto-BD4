@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiBiblioteca - Sistema de Gestión de Biblioteca</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- CONTENEDOR PRINCIPAL DE LA APP -->
+    <div class="app-layout">
+        
+        <!-- SIDEBAR DE NAVEGACION -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i data-lucide="library" class="brand-icon"></i>
+                <span class="brand-name">MiBiblioteca</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" id="btn-dashboard" onclick="switchTab('dashboard')">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-btn" id="btn-libros" onclick="switchTab('libros')">
+                    <i data-lucide="book-open"></i>
+                    <span>Libros / Catálogo</span>
+                </button>
+                <button class="nav-btn" id="btn-usuarios" onclick="switchTab('usuarios')">
+                    <i data-lucide="users"></i>
+                    <span>Usuarios / Miembros</span>
+                </button>
+                <button class="nav-btn" id="btn-prestamos" onclick="switchTab('prestamos')">
+                    <i data-lucide="arrow-left-right"></i>
+                    <span>Préstamos</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="db-status">
+                    <span class="status-dot green" id="status-dot"></span>
+                    <span class="status-text" id="status-text">Conectado a MySQL</span>
+                </div>
+                <div class="theme-section">
+                    <button class="theme-toggle-btn" id="btn-theme-toggle" onclick="toggleTheme()" title="Cambiar Tema">
+                        <i data-lucide="sun" class="sun-icon"></i>
+                        <i data-lucide="moon" class="moon-icon"></i>
+                    </button>
+                    <span class="version-text">v1.0.0 Pro</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- AREA DE CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            
+            <!-- SPINNER DE CARGA GLOBAL -->
+            <div class="spinner-overlay" id="global-spinner" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+
+            <!-- VISTA: DASHBOARD -->
+            <section id="view-dashboard" class="content-section active">
+                <header class="section-header">
+                    <div>
+                        <h1>Dashboard de Control</h1>
+                        <p class="subtitle">Resumen general del estado e inventario de la biblioteca.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-icon-only" onclick="fetchDashboardData()" title="Sincronizar Datos">
+                        <i data-lucide="rotate-cw"></i>
+                    </button>
+                </header>
+
+                <!-- Tarjetas Métricas -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Catálogo de Libros</span>
+                            <i data-lucide="bookmark" class="metric-icon blue"></i>
+                        </div>
+                        <h2 class="metric-value" id="metric-libros">0</h2>
+                        <p class="metric-subtext">Títulos registrados</p>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Stock Disponible</span>
+                            <i data-lucide="layers" class="metric-icon green"></i>
+                        </div>
+                        <h2 class="metric-value" id="metric-stock">0</h2>
+                        <p class="metric-subtext">Ejemplares físicos</p>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Miembros Activos</span>
+                            <i data-lucide="users-round" class="metric-icon yellow"></i>
+                        </div>
+                        <h2 class="metric-value" id="metric-usuarios">0</h2>
+                        <p class="metric-subtext">Usuarios registrados</p>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-header">
+                            <span class="metric-title">Préstamos Pendientes</span>
+                            <i data-lucide="refresh-cw" class="metric-icon red"></i>
+                        </div>
+                        <h2 class="metric-value" id="metric-prestamos">0</h2>
+                        <p class="metric-subtext">Libros fuera de sala</p>
+                    </div>
+                </div>
+
+                <!-- Actividad Reciente -->
+                <div class="activity-panel">
+                    <h3>Actividad Reciente (Últimas Transacciones)</h3>
+                    <hr class="divider">
+                    <ul class="activity-list" id="activity-list">
+                        <!-- Se puebla por JS -->
+                    </ul>
+                </div>
+            </section>
+
+            <!-- VISTA: LIBROS / CATALOGO -->
+            <section id="view-libros" class="content-section">
+                <header class="section-header">
+                    <div>
+                        <h1>Catálogo de Libros</h1>
+                        <p class="subtitle">Gestión, filtros y carga de títulos en el sistema.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModal('modal-libro')">
+                        <i data-lucide="plus"></i>
+                        <span>Agregar Libro</span>
+                    </button>
+                </header>
+
+                <div class="search-bar-row">
+                    <div class="search-input-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="search-libro-input" placeholder="Buscar libro por título, autor o categoría..." oninput="filterLibros()">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ISBN</th>
+                                <th>Título</th>
+                                <th>Autor</th>
+                                <th>Año</th>
+                                <th>Stock</th>
+                                <th>Categoría</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-libros-body">
+                            <!-- Se puebla por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VISTA: USUARIOS / MIEMBROS -->
+            <section id="view-usuarios" class="content-section">
+                <header class="section-header">
+                    <div>
+                        <h1>Miembros de la Biblioteca</h1>
+                        <p class="subtitle">Gestión y alta de miembros afiliados al sistema de préstamos.</p>
+                    </div>
+                    <button class="btn btn-success" onclick="openModal('modal-usuario')">
+                        <i data-lucide="user-plus"></i>
+                        <span>Nuevo Miembro</span>
+                    </button>
+                </header>
+
+                <div class="search-bar-row">
+                    <div class="search-input-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="search-usuario-input" placeholder="Buscar usuario por nombre o correo..." oninput="filterUsuarios()">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre Completo</th>
+                                <th>Correo Electrónico</th>
+                                <th>Fecha de Registro</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-usuarios-body">
+                            <!-- Se puebla por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VISTA: PRESTAMOS -->
+            <section id="view-prestamos" class="content-section">
+                <header class="section-header">
+                    <div>
+                        <h1>Préstamos y Devoluciones</h1>
+                        <p class="subtitle">Visualice préstamos activos, registre devoluciones o cree nuevas transacciones.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openModalPrestamo()">
+                        <i data-lucide="send"></i>
+                        <span>Nuevo Préstamo</span>
+                    </button>
+                </header>
+
+                <div class="tabs-row">
+                    <button class="tab-item active" id="tab-loans-activos" onclick="switchLoansTab('activos')">Préstamos Activos</button>
+                    <button class="tab-item" id="tab-loans-historico" onclick="switchLoansTab('historico')">Historial Completo</button>
+                </div>
+
+                <!-- Tabla de Préstamos Activos -->
+                <div class="table-container" id="container-loans-activos">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Miembro</th>
+                                <th>Libro / Título</th>
+                                <th>ISBN</th>
+                                <th>F. Préstamo</th>
+                                <th>F. Vencimiento</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-prestamos-activos-body">
+                            <!-- Se puebla por JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Tabla de Historial Completo -->
+                <div class="table-container" id="container-loans-historico" style="display: none;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Miembro</th>
+                                <th>Libro / Título</th>
+                                <th>ISBN</th>
+                                <th>F. Préstamo</th>
+                                <th>F. Vencimiento</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-prestamos-historico-body">
+                            <!-- Se puebla por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==========================================
+         MODALES / DIALOGOS FORMULARIOS
+         ========================================== -->
+    
+    <!-- MODAL: AGREGAR LIBRO -->
+    <div class="modal-overlay" id="modal-libro">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Registrar Nuevo Libro</h2>
+                <button class="close-btn" onclick="closeModal('modal-libro')">&times;</button>
+            </div>
+            <form id="form-libro" onsubmit="submitLibro(event)">
+                <div class="form-group">
+                    <label for="libro-isbn">ISBN</label>
+                    <input type="text" id="libro-isbn" required placeholder="ej: 978-3-16-148410-0">
+                    <span class="error-msg" id="error-libro-isbn"></span>
+                </div>
+                <div class="form-group">
+                    <label for="libro-titulo">Título del Libro</label>
+                    <input type="text" id="libro-titulo" required placeholder="ej: Cien años de soledad">
+                    <span class="error-msg" id="error-libro-titulo"></span>
+                </div>
+                <div class="form-group">
+                    <label for="libro-autor">Autor</label>
+                    <input type="text" id="libro-autor" required placeholder="ej: Gabriel García Márquez">
+                    <span class="error-msg" id="error-libro-autor"></span>
+                </div>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="libro-anio">Año de Publicación</label>
+                        <input type="number" id="libro-anio" required>
+                        <span class="error-msg" id="error-libro-anio"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="libro-cantidad">Cantidad Inicial</label>
+                        <input type="number" id="libro-cantidad" required value="1" min="0">
+                        <span class="error-msg" id="error-libro-cantidad"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="libro-categoria">Categoría</label>
+                    <input type="text" id="libro-categoria" placeholder="ej: Realismo Mágico (dejar vacío para 'Sin Categoría')">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-libro')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Libro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR USUARIO -->
+    <div class="modal-overlay" id="modal-usuario">
+        <div class="modal-content small-modal">
+            <div class="modal-header">
+                <h2>Registrar Nuevo Miembro</h2>
+                <button class="close-btn" onclick="closeModal('modal-usuario')">&times;</button>
+            </div>
+            <form id="form-usuario" onsubmit="submitUsuario(event)">
+                <div class="form-group">
+                    <label for="usuario-nombre">Nombre Completo</label>
+                    <input type="text" id="usuario-nombre" required placeholder="ej: Carlos Pérez">
+                    <span class="error-msg" id="error-usuario-nombre"></span>
+                </div>
+                <div class="form-group">
+                    <label for="usuario-correo">Correo Electrónico</label>
+                    <input type="email" id="usuario-correo" required placeholder="ej: carlos@correo.com" oninput="validateEmailRealtime()">
+                    <span class="email-indicator" id="email-format-indicator">Pendiente de ingreso</span>
+                    <span class="error-msg" id="error-usuario-correo"></span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: REGISTRAR PRÉSTAMO -->
+    <div class="modal-overlay" id="modal-prestamo">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Registrar Préstamo de Libro</h2>
+                <button class="close-btn" onclick="closeModal('modal-prestamo')">&times;</button>
+            </div>
+            <form id="form-prestamo" onsubmit="submitPrestamo(event)">
+                <div class="form-group">
+                    <label for="prestamo-usuario">Seleccionar Miembro (ID - Nombre)</label>
+                    <select id="prestamo-usuario" required>
+                        <!-- Se puebla dinámicamente -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prestamo-libro">Seleccionar Libro con Stock (ISBN - Título)</label>
+                    <select id="prestamo-libro" required>
+                        <!-- Se puebla dinámicamente -->
+                    </select>
+                </div>
+                <div class="form-group" style="width: 140px;">
+                    <label for="prestamo-dias">Duración (Días)</label>
+                    <input type="number" id="prestamo-dias" required value="7" min="1">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-prestamo')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Préstamo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE NOTIFICACIONES (TOASTS) -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
