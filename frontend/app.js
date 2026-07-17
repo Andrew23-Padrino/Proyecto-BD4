@@ -667,3 +667,148 @@ function updateThemeToggleUI(theme) {
         btn.setAttribute("title", "Cambiar a Modo Oscuro");
     }
 }
+
+// -------------------------------------------------------------
+// CONTROLADOR DE ACCESO / LOGIN POR ROL
+// -------------------------------------------------------------
+function showLectorLogin() {
+    document.getElementById("step-role-selector").style.display = "none";
+    document.getElementById("step-lector-login").style.display = "block";
+    document.getElementById("error-login").textContent = "";
+    document.getElementById("login-user-id").value = "";
+}
+
+function showRoleSelector() {
+    document.getElementById("step-role-selector").style.display = "block";
+    document.getElementById("step-lector-login").style.display = "none";
+}
+
+function loginAsAdmin() {
+    currentRole = "admin";
+    currentUserId = null;
+    currentUserName = "Bibliotecario";
+    enterApp();
+}
+
+async function loginAsLector() {
+    const idInput = document.getElementById("login-user-id");
+    const errorSpan = document.getElementById("error-login");
+    errorSpan.textContent = "";
+    
+    const val = idInput.value.trim();
+    if (!val) {
+        errorSpan.textContent = "El ID es requerido.";
+        return;
+    }
+    
+    const uid = parseInt(val);
+    if (isNaN(uid)) {
+        errorSpan.textContent = "El ID debe ser un número.";
+        return;
+    }
+    
+    setLoading(true);
+    try {
+        const response = await fetch(`${API_URL}/api/usuarios`);
+        if (!response.ok) throw new Error("Error al consultar la lista de usuarios.");
+        
+        const users = await response.json();
+        const user = users.find(u => u.id === uid);
+        
+        if (!user) {
+            errorSpan.textContent = `El ID de usuario '${uid}' no está registrado.`;
+            return;
+        }
+        
+        currentRole = "lector";
+        currentUserId = user.id;
+        currentUserName = user.nombre;
+        
+        enterApp();
+    } catch (err) {
+        errorSpan.textContent = err.message;
+    } finally {
+        setLoading(false);
+    }
+}
+
+function enterApp() {
+    // Ocultar login, mostrar app layout
+    document.getElementById("login-layout").style.display = "none";
+    document.getElementById("app-layout").style.display = "flex";
+    
+    // Adaptar elementos de la interfaz según el rol
+    const btnDash = document.getElementById("btn-dashboard");
+    const btnUsers = document.getElementById("btn-usuarios");
+    const btnLoans = document.getElementById("btn-prestamos");
+    const btnMyLoans = document.getElementById("btn-mis-prestamos");
+    const btnAddBook = document.getElementById("btn-open-add-book");
+    const thAcciones = document.getElementById("th-libro-acciones");
+    
+    if (currentRole === "lector") {
+        btnDash.style.display = "none";
+        btnUsers.style.display = "none";
+        btnLoans.style.display = "none";
+        btnMyLoans.style.display = "flex";
+        btnAddBook.style.display = "none";
+        thAcciones.style.display = "";
+        
+        // Modificar textos de encabezados en préstamos
+        document.getElementById("mis-prestamos-header-title").textContent = `Mis Préstamos`;
+        document.getElementById("mis-prestamos-header-subtitle").textContent = `Bienvenido, ${currentUserName}. Consulte el estado y vencimiento de sus préstamos.`;
+        
+        switchTab("libros");
+    } else {
+        btnDash.style.display = "flex";
+        btnUsers.style.display = "flex";
+        btnLoans.style.display = "flex";
+        btnMyLoans.style.display = "none";
+        btnAddBook.style.display = "flex";
+        thAcciones.style.display = "none";
+        
+        switchTab("dashboard");
+    }
+    
+    lucide.createIcons();
+}
+
+function logout() {
+    if (!confirm("¿Está seguro de cerrar sesión?")) return;
+    
+    currentRole = null;
+    currentUserId = null;
+    currentUserName = "";
+    
+    document.getElementById("app-layout").style.display = "none";
+    document.getElementById("login-layout").style.display = "flex";
+    showRoleSelector();
+}
+
+async function requestLoanDirectly(isbn, title) {
+    if (!confirm(`¿Desea solicitar el préstamo del libro "${title}"?`)) return;
+    
+    setLoading(true);
+    try {
+        const response = await fetch(`${API_URL}/api/prestamos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id_usuario: currentUserId,
+                isbn: isbn,
+                dias_prestamo: 7
+            })
+        });
+        
+        const resData = await response.json();
+        if (!response.ok) {
+            throw new Error(resData.detail || "Error al procesar el préstamo");
+        }
+        
+        showToast(`Préstamo #${resData.id} registrado con éxito.`, "success");
+        fetchLibros();
+    } catch (err) {
+        showToast(err.message, "error");
+    } finally {
+        setLoading(false);
+    }
+}

@@ -14,8 +14,48 @@
 </head>
 <body>
 
+    <!-- INTERFAZ DE ACCESO (LOGIN) -->
+    <div class="login-layout" id="login-layout">
+        <div class="login-card">
+            <div class="login-brand">
+                <i data-lucide="library" class="brand-logo-icon"></i>
+                <h1>MiBiblioteca</h1>
+            </div>
+            <hr class="divider">
+            
+            <!-- Selector de Perfil -->
+            <div class="login-step" id="step-role-selector">
+                <p class="login-subtitle">Seleccione su perfil de acceso</p>
+                <div class="role-buttons-grid">
+                    <button class="role-btn btn-admin" onclick="loginAsAdmin()">
+                        <i data-lucide="shield-check"></i>
+                        <span>Bibliotecario(a)</span>
+                    </button>
+                    <button class="role-btn btn-lector" onclick="showLectorLogin()">
+                        <i data-lucide="user"></i>
+                        <span>Lector / Miembro</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Login de Lector -->
+            <div class="login-step" id="step-lector-login" style="display: none;">
+                <p class="login-subtitle">Ingreso de Lector</p>
+                <div class="form-group">
+                    <label for="login-user-id">ID de Usuario</label>
+                    <input type="number" id="login-user-id" placeholder="Ingrese su número de ID de miembro...">
+                    <span class="error-msg" id="error-login" style="margin-top: 5px;"></span>
+                </div>
+                <div class="login-actions">
+                    <button class="btn btn-secondary" onclick="showRoleSelector()">Regresar</button>
+                    <button class="btn btn-success" onclick="loginAsLector()">Ingresar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- CONTENEDOR PRINCIPAL DE LA APP -->
-    <div class="app-layout">
+    <div class="app-layout" id="app-layout" style="display: none;">
         
         <!-- SIDEBAR DE NAVEGACION -->
         <aside class="sidebar">
@@ -41,9 +81,17 @@
                     <i data-lucide="arrow-left-right"></i>
                     <span>Préstamos</span>
                 </button>
+                <button class="nav-btn" id="btn-mis-prestamos" onclick="switchTab('mis-prestamos')" style="display: none;">
+                    <i data-lucide="history"></i>
+                    <span>Mis Préstamos</span>
+                </button>
             </nav>
 
             <div class="sidebar-footer">
+                <button class="nav-btn btn-logout" id="btn-logout" onclick="logout()" style="margin-top: 10px; width: 100%;">
+                    <i data-lucide="log-out"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
                 <div class="db-status">
                     <span class="status-dot green" id="status-dot"></span>
                     <span class="status-text" id="status-text">Conectado a MySQL</span>
@@ -131,7 +179,7 @@
                         <h1>Catálogo de Libros</h1>
                         <p class="subtitle">Gestión, filtros y carga de títulos en el sistema.</p>
                     </div>
-                    <button class="btn btn-primary" onclick="openModal('modal-libro')">
+                    <button class="btn btn-primary" id="btn-open-add-book" onclick="openModal('modal-libro')">
                         <i data-lucide="plus"></i>
                         <span>Agregar Libro</span>
                     </button>
@@ -154,6 +202,7 @@
                                 <th>Año</th>
                                 <th>Stock</th>
                                 <th>Categoría</th>
+                                <th id="th-libro-acciones" style="display: none;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="table-libros-body">
@@ -253,6 +302,37 @@
                             </tr>
                         </thead>
                         <tbody id="table-prestamos-historico-body">
+                            <!-- Se puebla por JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- VISTA: MIS PRESTAMOS (LECTOR) -->
+            <section id="view-mis-prestamos" class="content-section">
+                <header class="section-header">
+                    <div>
+                        <h1 id="mis-prestamos-header-title">Mis Préstamos</h1>
+                        <p class="subtitle" id="mis-prestamos-header-subtitle">Consulte el estado y vencimiento de sus préstamos.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-icon-only" onclick="fetchPrestamos()" title="Sincronizar Datos">
+                        <i data-lucide="rotate-cw"></i>
+                    </button>
+                </header>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Libro / Título</th>
+                                <th>ISBN</th>
+                                <th>F. Préstamo</th>
+                                <th>F. Vencimiento</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-mis-prestamos-body">
                             <!-- Se puebla por JS -->
                         </tbody>
                     </table>

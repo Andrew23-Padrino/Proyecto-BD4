@@ -52,7 +52,10 @@ def main(page: ft.Page):
         "books_list": [],
         "users_list": [],
         "active_loans": [],
-        "all_loans": []
+        "all_loans": [],
+        "user_role": None,
+        "logged_user_id": None,
+        "logged_user_name": ""
     }
 
     # -------------------------------------------------------------
@@ -543,30 +546,58 @@ def main(page: ft.Page):
         content_padding=12
     )
 
+    def solicitar_prestamo_lector(isbn: str, titulo: str):
+        set_loading(True)
+        try:
+            id_prestamo = PrestamoService.registrar_prestamo(
+                id_usuario=state["logged_user_id"],
+                isbn=isbn,
+                dias_prestamo=7
+            )
+            show_toast(f"Préstamo del libro '{titulo}' registrado con éxito. Folio: #{id_prestamo}")
+            cargar_datos()
+            navegar_a("libros")
+        except BibliotecaError as ex:
+            show_toast(str(ex), is_error=True)
+        except Exception as ex:
+            show_toast(f"Error: {str(ex)}", is_error=True)
+        finally:
+            set_loading(False)
+
     def on_search_libro_change(e):
         query = txt_buscar_libro.value.strip().lower()
         if not query:
-            # Restaurar lista completa
             cargar_datos()
             navegar_a("libros")
             return
             
         try:
-            # Usar servicio de búsqueda
             coincidencias = LibroService.buscar_libros(query)
-            # Re-renderizar tabla de libros filtrados
-            dt_libros.rows = [
-                ft.DataRow(
-                    cells=[
-                        ft.DataCell(ft.Text(l.isbn, weight=ft.FontWeight.W_500, color=get_color("text"))),
-                        ft.DataCell(ft.Text(l.titulo, weight=ft.FontWeight.BOLD, color=get_color("text"))),
-                        ft.DataCell(ft.Text(l.autor, color=get_color("text"))),
-                        ft.DataCell(ft.Text(str(l.anio_publicacion), color=get_color("text"))),
-                        ft.DataCell(ft.Text(str(l.cantidad_disponible), weight=ft.FontWeight.BOLD, color=get_color("success") if l.cantidad_disponible > 0 else get_color("danger"))),
-                        ft.DataCell(ft.Text(l.categoria, color=get_color("text"))),
-                    ]
-                ) for l in coincidencias
-            ]
+            rows = []
+            for l in coincidencias:
+                cells = [
+                    ft.DataCell(ft.Text(l.isbn, weight=ft.FontWeight.W_500, color=get_color("text"))),
+                    ft.DataCell(ft.Text(l.titulo, weight=ft.FontWeight.BOLD, color=get_color("text"))),
+                    ft.DataCell(ft.Text(l.autor, color=get_color("text"))),
+                    ft.DataCell(ft.Text(str(l.anio_publicacion), color=get_color("text"))),
+                    ft.DataCell(ft.Text(str(l.cantidad_disponible), weight=ft.FontWeight.BOLD, color=get_color("success") if l.cantidad_disponible > 0 else get_color("danger"))),
+                    ft.DataCell(ft.Text(l.categoria, color=get_color("text"))),
+                ]
+                if state["user_role"] == "lector":
+                    if l.cantidad_disponible > 0:
+                        btn_solicitar = ft.ElevatedButton(
+                            "Solicitar",
+                            icon=ft.Icons.SEND_ROUNDED,
+                            bgcolor=get_color("accent"),
+                            color="#ffffff",
+                            small=True,
+                            on_click=lambda e, isbn=l.isbn, titulo=l.titulo: solicitar_prestamo_lector(isbn, titulo)
+                        )
+                    else:
+                        btn_solicitar = ft.Text("Sin Stock", color=get_color("danger"), weight=ft.FontWeight.BOLD, size=13)
+                    cells.append(ft.DataCell(btn_solicitar))
+                rows.append(ft.DataRow(cells=cells))
+            dt_libros.rows = rows
             page.update()
         except Exception as ex:
             show_toast(f"Error en búsqueda: {str(ex)}", is_error=True)
@@ -586,19 +617,31 @@ def main(page: ft.Page):
     )
 
     def get_libros_view() -> ft.Control:
-        # Poblar filas de la tabla
-        dt_libros.rows = [
-            ft.DataRow(
-                cells=[
-                    ft.DataCell(ft.Text(l.isbn, weight=ft.FontWeight.W_500, color=get_color("text"))),
-                    ft.DataCell(ft.Text(l.titulo, weight=ft.FontWeight.BOLD, color=get_color("text"))),
-                    ft.DataCell(ft.Text(l.autor, color=get_color("text"))),
-                    ft.DataCell(ft.Text(str(l.anio_publicacion), color=get_color("text"))),
-                    ft.DataCell(ft.Text(str(l.cantidad_disponible), weight=ft.FontWeight.BOLD, color=get_color("success") if l.cantidad_disponible > 0 else get_color("danger"))),
-                    ft.DataCell(ft.Text(l.categoria, color=get_color("text"))),
-                ]
-            ) for l in state["books_list"]
-        ]
+        rows = []
+        for l in state["books_list"]:
+            cells = [
+                ft.DataCell(ft.Text(l.isbn, weight=ft.FontWeight.W_500, color=get_color("text"))),
+                ft.DataCell(ft.Text(l.titulo, weight=ft.FontWeight.BOLD, color=get_color("text"))),
+                ft.DataCell(ft.Text(l.autor, color=get_color("text"))),
+                ft.DataCell(ft.Text(str(l.anio_publicacion), color=get_color("text"))),
+                ft.DataCell(ft.Text(str(l.cantidad_disponible), weight=ft.FontWeight.BOLD, color=get_color("success") if l.cantidad_disponible > 0 else get_color("danger"))),
+                ft.DataCell(ft.Text(l.categoria, color=get_color("text"))),
+            ]
+            if state["user_role"] == "lector":
+                if l.cantidad_disponible > 0:
+                    btn_solicitar = ft.ElevatedButton(
+                        "Solicitar",
+                        icon=ft.Icons.SEND_ROUNDED,
+                        bgcolor=get_color("accent"),
+                        color="#ffffff",
+                        small=True,
+                        on_click=lambda e, isbn=l.isbn, titulo=l.titulo: solicitar_prestamo_lector(isbn, titulo)
+                    )
+                else:
+                    btn_solicitar = ft.Text("Sin Stock", color=get_color("danger"), weight=ft.FontWeight.BOLD, size=13)
+                cells.append(ft.DataCell(btn_solicitar))
+            rows.append(ft.DataRow(cells=cells))
+        dt_libros.rows = rows
         
         # Envoltura scrollable para la tabla
         table_container = ft.Container(
@@ -628,7 +671,8 @@ def main(page: ft.Page):
                             icon=ft.Icons.ADD,
                             on_click=lambda _: setattr(modal_libro, "open", True) or page.update(),
                             bgcolor="#3b82f6",
-                            color="#ffffff"
+                            color="#ffffff",
+                            visible=(state["user_role"] == "admin")
                         )
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN
@@ -884,6 +928,81 @@ def main(page: ft.Page):
         )
 
 
+    # --- 5. MIS PRESTAMOS VIEW (LECTOR) ---
+    dt_mis_prestamos = ft.DataTable(
+        border_radius=10,
+        heading_row_color=ft.colors.BLACK12,
+        columns=[
+            ft.DataColumn(ft.Text("ID", weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Libro / Título", weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("ISBN", weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("F. Préstamo", weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("F. Vencimiento", weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Estado", weight=ft.FontWeight.BOLD)),
+        ]
+    )
+
+    def get_mis_prestamos_view() -> ft.Control:
+        my_id = state["logged_user_id"]
+        mis_prestamos = [p for p in state["all_loans"] if p["id_usuario"] == my_id]
+        
+        dt_mis_prestamos.rows = [
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(ft.Text(str(p['id']), weight=ft.FontWeight.W_500, color=get_color("text"))),
+                    ft.DataCell(ft.Text(p['titulo_libro'], weight=ft.FontWeight.BOLD, color=get_color("text"))),
+                    ft.DataCell(ft.Text(p['isbn'], color=get_color("text"))),
+                    ft.DataCell(ft.Text(p['fecha_prestamo'].strftime('%Y-%m-%d') if p['fecha_prestamo'] else 'N/A', color=get_color("text"))),
+                    ft.DataCell(ft.Text(p['fecha_devolucion_esperada'].strftime('%Y-%m-%d') if p['fecha_devolucion_esperada'] else 'N/A', color=get_color("text"))),
+                    ft.DataCell(
+                        ft.Container(
+                            content=ft.Text(p['estado'], color="#ffffff", size=12, weight=ft.FontWeight.BOLD),
+                            bgcolor=get_color("success") if p['estado'] == 'Devuelto' else get_color("danger"),
+                            border_radius=8,
+                            padding=ft.padding.symmetric(horizontal=10, vertical=4)
+                        )
+                    )
+                ]
+            ) for p in mis_prestamos
+        ]
+        
+        table_container = ft.Container(
+            content=ft.ListView(
+                [
+                    ft.Row([dt_mis_prestamos], scroll=ft.ScrollMode.ALWAYS)
+                ],
+                expand=True
+            ),
+            border=ft.border.all(1, get_color("border")),
+            border_radius=10,
+            bgcolor=get_color("card"),
+            padding=15,
+            expand=True
+        )
+
+        return ft.Column(
+            [
+                ft.Row(
+                    [
+                        ft.Column([
+                            ft.Text("Mis Préstamos", size=26, weight=ft.FontWeight.BOLD, color=get_color("text")),
+                            ft.Text(f"Bienvenido, {state['logged_user_name']}. Consulte el estado y vencimiento de sus préstamos.", color=get_color("text_muted"), size=14)
+                        ]),
+                        ft.IconButton(
+                            icon=ft.Icons.REFRESH_ROUNDED,
+                            icon_color=get_color("accent"),
+                            on_click=lambda _: [cargar_datos(), navegar_a("mis_prestamos")],
+                            tooltip="Sincronizar mis datos"
+                        )
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                ),
+                ft.Divider(color="transparent", height=15),
+                table_container
+            ],
+            expand=True
+        )
+
     # -------------------------------------------------------------
     # CONTROLADOR DE RUTAS/NAVEGACIÓN INTERNA
     # -------------------------------------------------------------
@@ -895,6 +1014,8 @@ def main(page: ft.Page):
         btn_books.bgcolor = "transparent"
         btn_users.bgcolor = "transparent"
         btn_loans.bgcolor = "transparent"
+        btn_my_loans.bgcolor = "transparent"
+        btn_logout.bgcolor = "transparent"
         
         # Resaltar botón activo
         active_btn = None
@@ -910,6 +1031,9 @@ def main(page: ft.Page):
         elif vista == "prestamos":
             active_btn = btn_loans
             main_content_area.content = get_prestamos_view()
+        elif vista == "mis_prestamos":
+            active_btn = btn_my_loans
+            main_content_area.content = get_mis_prestamos_view()
             
         if active_btn:
             active_btn.bgcolor = "#ffffff1c" if page.theme_mode == ft.ThemeMode.DARK else "#00000014"
@@ -945,10 +1069,18 @@ def main(page: ft.Page):
             animate=ft.animation.Animation(200, ft.AnimationCurve.EASE_OUT)
         )
 
+    def cerrar_sesion(e):
+        state["user_role"] = None
+        state["logged_user_id"] = None
+        state["logged_user_name"] = ""
+        mostrar_pantalla_login()
+
     btn_dash = crear_btn_sidebar("Dashboard", ft.Icons.DASHBOARD_ROUNDED, lambda _: navegar_a("dashboard"))
     btn_books = crear_btn_sidebar("Libros / Catálogo", ft.Icons.BOOK_ROUNDED, lambda _: navegar_a("libros"))
     btn_users = crear_btn_sidebar("Usuarios / Miembros", ft.Icons.PEOPLE_ROUNDED, lambda _: navegar_a("usuarios"))
     btn_loans = crear_btn_sidebar("Préstamos y Devolución", ft.Icons.SWAP_HORIZ_ROUNDED, lambda _: navegar_a("prestamos"))
+    btn_my_loans = crear_btn_sidebar("Mis Préstamos", ft.Icons.HISTORY_ROUNDED, lambda _: navegar_a("mis_prestamos"))
+    btn_logout = crear_btn_sidebar("Cerrar Sesión", ft.Icons.LOGOUT_ROUNDED, cerrar_sesion)
     
     btn_theme = ft.IconButton(
         icon=ft.Icons.LIGHT_MODE_ROUNDED,
@@ -959,6 +1091,8 @@ def main(page: ft.Page):
 
     db_indicator_dot = ft.Container(width=10, height=10, border_radius=5, bgcolor=get_color("danger"))
     db_indicator_text = ft.Text("Desconectado de MySQL", size=12, color=get_color("text_muted"))
+
+    navigation_column = ft.Column(spacing=8, expand=True)
 
     sidebar_container = ft.Container(
         content=ft.Column(
@@ -976,11 +1110,7 @@ def main(page: ft.Page):
                 ),
                 ft.Divider(color=get_color("border")),
                 # Botones de Navegación
-                ft.Column(
-                    [btn_dash, btn_books, btn_users, btn_loans],
-                    spacing=8,
-                    expand=True
-                ),
+                navigation_column,
                 ft.Divider(color=get_color("border")),
                 # Indicador de base de datos
                 ft.Row(
@@ -1009,6 +1139,226 @@ def main(page: ft.Page):
         padding=15
     )
 
+    def cargar_sidebar_por_rol():
+        navigation_column.controls.clear()
+        if state["user_role"] == "admin":
+            navigation_column.controls.extend([btn_dash, btn_books, btn_users, btn_loans, btn_logout])
+        else:
+            navigation_column.controls.extend([btn_books, btn_my_loans, btn_logout])
+
+    def configurar_tabla_libros_por_rol():
+        if state["user_role"] == "admin":
+            dt_libros.columns = [
+                ft.DataColumn(ft.Text("ISBN", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Título", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Autor", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Año", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Stock", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Categoría", weight=ft.FontWeight.BOLD)),
+            ]
+        else:
+            dt_libros.columns = [
+                ft.DataColumn(ft.Text("ISBN", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Título", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Autor", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Año", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Stock", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Categoría", weight=ft.FontWeight.BOLD)),
+                ft.DataColumn(ft.Text("Acciones", weight=ft.FontWeight.BOLD)),
+            ]
+
+    def iniciar_interfaz_principal():
+        page.clean()
+        page.padding = 0
+        page.spacing = 0
+        cargar_sidebar_por_rol()
+        configurar_tabla_libros_por_rol()
+        page.add(
+            ft.Row(
+                [
+                    sidebar_container,
+                    main_content_area
+                ],
+                expand=True,
+                spacing=0
+            )
+        )
+        if state["user_role"] == "admin":
+            navegar_a("dashboard")
+        else:
+            navegar_a("libros")
+
+    # -------------------------------------------------------------
+    # PANTALLA DE ACCESO (LOGIN)
+    # -------------------------------------------------------------
+    def mostrar_pantalla_login():
+        page.clean()
+        page.bgcolor = get_color("bg")
+        page.padding = 30
+        
+        txt_id_lector = ft.TextField(
+            label="ID de Usuario",
+            hint_text="Ingrese su número de ID de miembro...",
+            border_color=get_color("accent"),
+            width=280,
+            keyboard_type=ft.KeyboardType.NUMBER
+        )
+        
+        error_login = ft.Text("", color=get_color("danger"), weight=ft.FontWeight.BOLD, size=13)
+        
+        login_lector_container = ft.Container(visible=False)
+        selector_container = ft.Container(visible=True)
+        
+        def ir_a_login_lector(e):
+            selector_container.visible = False
+            login_lector_container.visible = True
+            error_login.value = ""
+            txt_id_lector.value = ""
+            page.update()
+            
+        def regresar_a_roles(e):
+            selector_container.visible = True
+            login_lector_container.visible = False
+            page.update()
+            
+        def intentar_login_lector(e):
+            val = txt_id_lector.value.strip()
+            if not val:
+                error_login.value = "El ID es requerido."
+                page.update()
+                return
+            try:
+                uid = int(val)
+            except ValueError:
+                error_login.value = "El ID debe ser un número entero."
+                page.update()
+                return
+                
+            set_loading(True)
+            try:
+                user = UsuarioService.buscar_por_id(uid)
+                state["user_role"] = "lector"
+                state["logged_user_id"] = user.id
+                state["logged_user_name"] = user.nombre
+                cargar_datos()
+                iniciar_interfaz_principal()
+            except UsuarioNoEncontradoError:
+                error_login.value = f"El ID de usuario '{uid}' no está registrado."
+            except Exception as ex:
+                error_login.value = f"Error: {str(ex)}"
+            finally:
+                set_loading(False)
+                page.update()
+                
+        def login_admin(e):
+            state["user_role"] = "admin"
+            state["logged_user_id"] = None
+            state["logged_user_name"] = "Bibliotecario"
+            set_loading(True)
+            cargar_datos()
+            iniciar_interfaz_principal()
+            set_loading(False)
+            
+        selector_container.content = ft.Column(
+            controls=[
+                ft.Text("Seleccione su perfil de acceso", size=16, color=get_color("text_muted"), weight=ft.FontWeight.W_500),
+                ft.Row(
+                    [
+                        ft.Container(
+                            content=ft.Column(
+                                [
+                                    ft.Icon(ft.Icons.ADMIN_PANEL_SETTINGS_ROUNDED, size=40, color="#ffffff"),
+                                    ft.Text("Bibliotecario(a)", size=16, weight=ft.FontWeight.BOLD, color="#ffffff")
+                                ],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                            ),
+                            bgcolor=get_color("accent"),
+                            width=180,
+                            height=140,
+                            border_radius=12,
+                            padding=15,
+                            on_click=login_admin,
+                            shadow=ft.BoxShadow(blur_radius=8, color="#00000022")
+                        ),
+                        ft.Container(
+                            content=ft.Column(
+                                [
+                                    ft.Icon(ft.Icons.PEOPLE_ROUNDED, size=40, color="#ffffff"),
+                                    ft.Text("Lector / Miembro", size=16, weight=ft.FontWeight.BOLD, color="#ffffff")
+                                ],
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                            ),
+                            bgcolor=get_color("success"),
+                            width=180,
+                            height=140,
+                            border_radius=12,
+                            padding=15,
+                            on_click=ir_a_login_lector,
+                            shadow=ft.BoxShadow(blur_radius=8, color="#00000022")
+                        )
+                    ],
+                    spacing=20,
+                    alignment=ft.MainAxisAlignment.CENTER
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=20
+        )
+        
+        login_lector_container.content = ft.Column(
+            controls=[
+                ft.Text("Ingreso de Lector", size=18, color=get_color("text"), weight=ft.FontWeight.BOLD),
+                txt_id_lector,
+                error_login,
+                ft.Row(
+                    [
+                        ft.TextButton("Regresar", on_click=regresar_a_roles),
+                        ft.ElevatedButton("Ingresar", on_click=intentar_login_lector, bgcolor=get_color("success"), color="#ffffff")
+                    ],
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    width=280
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=15
+        )
+        
+        login_card = ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [
+                            ft.Icon(ft.Icons.LIBRARY_BOOKS_ROUNDED, color="#3b82f6", size=45),
+                            ft.Text("MiBiblioteca", size=32, weight=ft.FontWeight.BOLD, color=get_color("text"))
+                        ],
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=10
+                    ),
+                    ft.Divider(color=get_color("border")),
+                    selector_container,
+                    login_lector_container
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=20
+            ),
+            bgcolor=get_color("card"),
+            border=ft.border.all(1, get_color("border")),
+            border_radius=16,
+            padding=30,
+            width=460,
+            shadow=ft.BoxShadow(blur_radius=15, color="#0000001a")
+        )
+        
+        page.add(
+            ft.Container(
+                content=login_card,
+                alignment=ft.alignment.center,
+                expand=True
+            )
+        )
+
     # -------------------------------------------------------------
     # CONTROLADOR DE CONEXIÓN AL INICIAR
     # -------------------------------------------------------------
@@ -1019,7 +1369,6 @@ def main(page: ft.Page):
             db_indicator_dot.bgcolor = get_color("success")
             db_indicator_text.value = "Conectado a MySQL"
             cargar_datos()
-            navegar_a("dashboard")
         else:
             db_indicator_dot.bgcolor = get_color("danger")
             db_indicator_text.value = "Error de Conexión"
@@ -1027,24 +1376,8 @@ def main(page: ft.Page):
                 "No se pudo establecer conexión inicial con la base de datos MySQL. Verifique config.py.",
                 is_error=True
             )
-            # Aún así cargamos vacíos para que no crashe
-            navegar_a("dashboard")
         set_loading(False)
-
-    # -------------------------------------------------------------
-    # ENSAMBLADO GENERAL DE LA PÁGINA
-    # -------------------------------------------------------------
-    page.bgcolor = get_color("bg")
-    page.add(
-        ft.Row(
-            [
-                sidebar_container,
-                main_content_area
-            ],
-            expand=True,
-            spacing=0
-        )
-    )
+        mostrar_pantalla_login()
     
     # Arrancar la base de datos en segundo plano
     iniciar_conexion()
