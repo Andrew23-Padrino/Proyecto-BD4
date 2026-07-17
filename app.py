@@ -97,7 +97,7 @@ def get_libros(q: str = Query(None, description="Búsqueda por título, autor o 
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/libros", status_code=21)
+@app.post("/api/libros", status_code=201)
 def create_libro(libro_in: LibroCreate):
     """Registra un nuevo libro en el catálogo."""
     try:
@@ -134,7 +134,7 @@ def get_usuarios():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/usuarios", status_code=21)
+@app.post("/api/usuarios", status_code=201)
 def create_usuario(usuario_in: UsuarioCreate):
     """Registra un nuevo miembro."""
     try:
@@ -171,7 +171,7 @@ def get_prestamos(solo_activos: bool = False):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/prestamos", status_code=21)
+@app.post("/api/prestamos", status_code=201)
 def create_prestamo(prestamo_in: PrestamoCreate):
     """Registra una solicitud de préstamo de libro."""
     try:

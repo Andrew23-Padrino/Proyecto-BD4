@@ -1196,12 +1196,12 @@ def main(page: ft.Page):
         page.bgcolor = get_color("bg")
         page.padding = 30
         
-        txt_id_lector = ft.TextField(
-            label="ID de Usuario",
-            hint_text="Ingrese su número de ID de miembro...",
+        txt_correo_lector = ft.TextField(
+            label="Correo Electrónico",
+            hint_text="Ingrese su correo registrado...",
             border_color=get_color("accent"),
             width=280,
-            keyboard_type=ft.KeyboardType.NUMBER
+            keyboard_type=ft.KeyboardType.EMAIL
         )
         
         error_login = ft.Text("", color=get_color("danger"), weight=ft.FontWeight.BOLD, size=13)
@@ -1213,7 +1213,7 @@ def main(page: ft.Page):
             selector_container.visible = False
             login_lector_container.visible = True
             error_login.value = ""
-            txt_id_lector.value = ""
+            txt_correo_lector.value = ""
             page.update()
             
         def regresar_a_roles(e):
@@ -1222,28 +1222,26 @@ def main(page: ft.Page):
             page.update()
             
         def intentar_login_lector(e):
-            val = txt_id_lector.value.strip()
+            val = txt_correo_lector.value.strip().lower()
             if not val:
-                error_login.value = "El ID es requerido."
+                error_login.value = "El correo electrónico es requerido."
                 page.update()
                 return
-            try:
-                uid = int(val)
-            except ValueError:
-                error_login.value = "El ID debe ser un número entero."
+            if not validar_formato_correo(val):
+                error_login.value = "Formato de correo electrónico inválido."
                 page.update()
                 return
                 
             set_loading(True)
             try:
-                user = UsuarioService.buscar_por_id(uid)
+                user = UsuarioService.buscar_por_correo(val)
                 state["user_role"] = "lector"
                 state["logged_user_id"] = user.id
                 state["logged_user_name"] = user.nombre
                 cargar_datos()
                 iniciar_interfaz_principal()
             except UsuarioNoEncontradoError:
-                error_login.value = f"El ID de usuario '{uid}' no está registrado."
+                error_login.value = f"El correo '{val}' no está registrado."
             except Exception as ex:
                 error_login.value = f"Error: {str(ex)}"
             finally:
@@ -1310,7 +1308,7 @@ def main(page: ft.Page):
         login_lector_container.content = ft.Column(
             controls=[
                 ft.Text("Ingreso de Lector", size=18, color=get_color("text"), weight=ft.FontWeight.BOLD),
-                txt_id_lector,
+                txt_correo_lector,
                 error_login,
                 ft.Row(
                     [

@@ -675,7 +675,7 @@ function showLectorLogin() {
     document.getElementById("step-role-selector").style.display = "none";
     document.getElementById("step-lector-login").style.display = "block";
     document.getElementById("error-login").textContent = "";
-    document.getElementById("login-user-id").value = "";
+    document.getElementById("login-user-email").value = "";
 }
 
 function showRoleSelector() {
@@ -691,19 +691,18 @@ function loginAsAdmin() {
 }
 
 async function loginAsLector() {
-    const idInput = document.getElementById("login-user-id");
+    const emailInput = document.getElementById("login-user-email");
     const errorSpan = document.getElementById("error-login");
     errorSpan.textContent = "";
     
-    const val = idInput.value.trim();
+    const val = emailInput.value.trim().toLowerCase();
     if (!val) {
-        errorSpan.textContent = "El ID es requerido.";
+        errorSpan.textContent = "El correo electrónico es requerido.";
         return;
     }
     
-    const uid = parseInt(val);
-    if (isNaN(uid)) {
-        errorSpan.textContent = "El ID debe ser un número.";
+    if (!validateEmail(val)) {
+        errorSpan.textContent = "Formato de correo electrónico inválido.";
         return;
     }
     
@@ -713,10 +712,10 @@ async function loginAsLector() {
         if (!response.ok) throw new Error("Error al consultar la lista de usuarios.");
         
         const users = await response.json();
-        const user = users.find(u => u.id === uid);
+        const user = users.find(u => u.correo.toLowerCase() === val);
         
         if (!user) {
-            errorSpan.textContent = `El ID de usuario '${uid}' no está registrado.`;
+            errorSpan.textContent = `El correo '${val}' no está registrado.`;
             return;
         }
         
