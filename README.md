@@ -1,95 +1,149 @@
-# Walkthrough: Sistema de Gestión de Biblioteca
+# 📚 Sistema de Gestión de Biblioteca
 
-Hemos implementado un sistema modular, limpio y profesional en Python 3 integrado con MySQL. A continuación se detalla el trabajo realizado.
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Flet UI](https://img.shields.io/badge/Flet-UI-blueviolet.svg)](https://flet.dev)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1.svg?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
-
-## 1. Estructura de Archivos Creada
-Se implementó la arquitectura POO recomendada para mantener la separación de responsabilidades:
-
-- [config.py](file:///c:/Users/Andrews/Documents/BD4/config.py): Configuración de credenciales de acceso a MySQL mediante variables de entorno y valores predeterminados.
-- [requirements.txt](file:///c:/Users/Andrews/Documents/BD4/requirements.txt): Declaración de las dependencias (`pymysql` y `cryptography`).
-- **`database/`**
-  - [database/schema.sql](file:///c:/Users/Andrews/Documents/BD4/database/schema.sql): Script SQL estructurado con restricciones de integridad, relaciones (FK) e índices.
-  - [database/connection.py](file:///c:/Users/Andrews/Documents/BD4/database/connection.py): Administrador de contexto `DatabaseConnection` y función `inicializar_base_de_datos()` para bootstrap de tablas.
-- **`models/`**
-  - [models/libro.py](file:///c:/Users/Andrews/Documents/BD4/models/libro.py): Modelo y mapeador de datos de la entidad `Libro`.
-  - [models/usuario.py](file:///c:/Users/Andrews/Documents/BD4/models/usuario.py): Modelo de la entidad `Usuario` (miembro).
-  - [models/prestamo.py](file:///c:/Users/Andrews/Documents/BD4/models/prestamo.py): Modelo de la entidad `Prestamo`.
-- **`services/`**
-  - [services/exceptions.py](file:///c:/Users/Andrews/Documents/BD4/services/exceptions.py): Excepciones personalizadas para reglas de negocio (ej. `SinStockError`, `LibroDuplicadoError`).
-  - [services/libro_service.py](file:///c:/Users/Andrews/Documents/BD4/services/libro_service.py): CRUD y búsqueda de libros.
-  - [services/usuario_service.py](file:///c:/Users/Andrews/Documents/BD4/services/usuario_service.py): Registro y obtención de usuarios.
-  - [services/prestamo_service.py](file:///c:/Users/Andrews/Documents/BD4/services/prestamo_service.py): Gestión de préstamos y devoluciones con transacciones SQL ACID.
-- [main.py](file:///c:/Users/Andrews/Documents/BD4/main.py): Interfaz interactiva de consola con el menú completo y control de errores.
-- **`tests/`**
-  - [tests/test_library.py](file:///c:/Users/Andrews/Documents/BD4/tests/test_library.py): Pruebas unitarias que validan la lógica de negocio con mocks.
+Un sistema modular, seguro y profesional para la administración de bibliotecas integrado con **MySQL**. Este proyecto destaca por implementar **tres interfaces de usuario distintas** en la misma lógica de negocio, además de emplear **control de concurrencia avanzado** para garantizar la integridad ACID en las transacciones de préstamos y devoluciones.
 
 ---
 
-## 2. Aspectos Destacados de la Implementación
+## 🚀 Características Clave
 
-### A. Integridad de Base de Datos (MySQL)
-- Llaves foráneas con `ON DELETE RESTRICT` para evitar huérfanos.
-- Constraints a nivel de base de datos como `CHECK (cantidad_disponible >= 0)` y validación básica de formato de correo.
-- Creación automática de índices (`idx_libros_titulo`, `idx_usuarios_correo`, `idx_prestamos_estado`) para mejorar el rendimiento de consultas frecuentes.
-
-### B. Context Managers Seguros
-La clase `DatabaseConnection` se encarga de:
-```python
-with DatabaseConnection() as (conn, cursor):
-    cursor.execute(...)
-    conn.commit()
-```
-Garantiza el cierre seguro de los cursores y conexiones incluso si ocurren fallas en medio de la consulta, y ejecuta un `rollback` en caso de excepción no controlada.
-
-### C. Lógica Transaccional ACID (Préstamos y Devoluciones)
-Para evitar condiciones de carrera (Race Conditions), las operaciones de préstamos y devoluciones usan **bloqueo pesimista** (`FOR UPDATE`) dentro de una transacción explícita:
-1. Se inicia la transacción.
-2. Se consulta y bloquea la fila del libro o préstamo (`SELECT ... FOR UPDATE`).
-3. Se verifica la regla de negocio (¿Hay stock? ¿Existe el usuario/libro?).
-4. Se ejecuta la inserción del préstamo y la actualización del stock.
-5. Se realiza el `COMMIT`. Si algo falla, se ejecuta `ROLLBACK` de manera automática por el administrador de contexto.
+*   **Arquitectura Modular Multiusuario**: Separación rigurosa de responsabilidades (Presentación, Servicios, Modelos y Persistencia).
+*   **Múltiples Interfaces**:
+    *   💻 **Web SPA**: Panel moderno y reactivo (FastAPI + HTML5/CSS3/JS Vanilla) con soporte de modo oscuro, alertas dinámicas (Toasts) y transiciones fluidas.
+    *   🖥️ **Desktop GUI**: Interfaz de escritorio nativa basada en **Flet** (Flutter para Python) con modo claro/oscuro.
+    *   📟 **CLI Console**: Interfaz de terminal interactiva con menús y control de excepciones.
+*   **Transaccionalidad Segura (ACID)**: Lógica de préstamos y devoluciones blindada contra condiciones de carrera mediante **bloqueos pesimistas (`SELECT ... FOR UPDATE`)** a nivel de base de datos MySQL (InnoDB).
+*   **Integridad Referencial Estricta**:
+    *   Llaves foráneas con políticas restrictivas (`ON DELETE RESTRICT`) para prevenir registros huérfanos.
+    *   Restricciones `CHECK` para control de stock no negativo y validación sintáctica de formato de correo.
+    *   Índices óptimos creados de forma automática para agilizar búsquedas.
+*   **Autobootstrap**: El sistema inicializa la base de datos y recrea el esquema SQL de forma automática en el primer inicio.
 
 ---
 
-## 3. Verificación y Pruebas Realizadas
+## 🛠️ Pila Tecnológica (Tech Stack)
 
-Se implementaron y ejecutaron con éxito pruebas unitarias en `tests/test_library.py` simulando la base de datos con `unittest.mock`. 
+*   **Lenguaje**: Python 3.8+
+*   **Base de Datos**: MySQL (motor InnoDB)
+*   **Frameworks Web / API**: FastAPI, Uvicorn, Pydantic
+*   **Desktop UI**: Flet (Flutter engine)
+*   **Acceso a Base de Datos**: PyMySQL
+*   **Estilos y Maquetación**: HTML5, Vanilla CSS3 (con variables de tema CSS), Lucide Icons
+*   **Pruebas (Testing)**: Unittest & Unittest.mock
 
-### Resultados de los Tests
+---
+
+## 📁 Estructura del Proyecto
+
 ```bash
-python -m unittest tests/test_library.py
-...
-----------------------------------------------------------------------
-Ran 3 tests in 0.014s
-
-OK
+├── database/            # Capa de persistencia (Esquema SQL y conexión)
+│   ├── connection.py    # Administrador de contextos de conexión y bootstrapping
+│   └── schema.sql       # Script de creación de tablas, restricciones e índices
+├── models/              # Clases de dominio del sistema
+│   ├── libro.py         # Entidad Libro
+│   ├── usuario.py       # Entidad Usuario
+│   └── prestamo.py      # Entidad Préstamo
+├── services/            # Capa lógica de negocio (Excepciones y Servicios)
+│   ├── exceptions.py    # Excepciones de negocio personalizadas
+│   ├── libro_service.py # Lógica CRUD y búsquedas de catálogo
+│   ├── usuario_service.py # Gestión y altas de miembros
+│   └── prestamo_service.py # Control transaccional ACID de préstamos y devoluciones
+├── frontend/            # Código fuente de la Single Page Application (Web UI)
+│   ├── index.html       # Estructura HTML de la app
+│   ├── style.css        # Hoja de estilos con variables de tema (Oscuro/Claro)
+│   └── app.js           # Lógica y llamadas AJAX (fetch) a FastAPI
+├── tests/               # Pruebas unitarias
+│   └── test_library.py  # Tests lógicos simulados con MagicMock
+├── app.py               # Servidor FastAPI (Servicios REST y Static Files)
+├── gui.py               # Aplicación de Escritorio (Flet)
+├── main.py              # Interfaz de Consola interactiva (CLI)
+├── config.py            # Carga de credenciales y dotenv
+└── requirements.txt     # Dependencias del sistema
 ```
-Esto confirma que la lógica de negocio (validaciones de usuario no existente, libro no existente, y falta de stock de libros) funciona perfectamente y lanza las excepciones de negocio adecuadas.
 
 ---
 
-## 4. Instrucciones para Ejecutar el Proyecto
+## ⚙️ Instalación y Configuración
 
-### 1. Configurar Base de Datos
-Edite el archivo [config.py](file:///c:/Users/Andrews/Documents/BD4/config.py) para ingresar los datos correctos de su servidor MySQL (ej. host, usuario y contraseña):
-```python
-DB_HOST = "localhost"
-DB_PORT = 3306
-DB_USER = "su_usuario"
-DB_PASSWORD = "su_contraseña"
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/tu-usuario/proyecto-bd4.git
+cd proyecto-bd4
 ```
 
-### 2. Instalar Dependencias
-Instale los paquetes especificados ejecutando:
+### 2. Configurar Variables de Entorno
+Cree un archivo `.env` en la raíz del proyecto basándose en el archivo `.env.example`:
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=tu_usuario
+DB_PASSWORD=tu_contraseña
+DB_NAME=biblioteca_db
+```
+*(Nota: Si no se configuran estas variables, el sistema usará credenciales por defecto: `localhost`, `3306`, `root`, sin contraseña, base de datos `biblioteca_db`)*.
+
+### 3. Instalar Dependencias
+Se recomienda utilizar un entorno virtual (venv):
 ```bash
+python -m venv venv
+# En Windows:
+venv\Scripts\activate
+# En Linux/macOS:
+source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-### 3. Ejecutar la Aplicación
-Inicie la consola interactiva:
+---
+
+## 🖥️ Ejecución de la Aplicación
+
+El proyecto proporciona **tres formas independientes** de interactuar con el sistema de biblioteca:
+
+### Opción A: Aplicación Web (FastAPI)
+Ejecute el servidor web para acceder desde cualquier navegador:
+```bash
+python app.py
+```
+El servidor se iniciará en **http://127.0.0.1:8000** sirviendo la API REST (`/api/...`) y el frontend estático interactivo en la raíz (`/`).
+
+### Opción B: Aplicación de Escritorio (Flet)
+Corra la aplicación gráfica multiplataforma:
+```bash
+python gui.py
+```
+Se abrirá una ventana de escritorio con el panel de administración, soporte de temas claro/oscuro y validación de formularios.
+
+### Opción C: Interfaz por Consola (CLI)
+Corra la consola interactiva clásica en terminal:
 ```bash
 python main.py
 ```
-*Nota: En el primer inicio, si el sistema detecta que la base de datos no existe, le preguntará si desea inicializarla automáticamente.*
+*(Nota: En cualquiera de los tres casos, si la base de datos `biblioteca_db` o sus tablas no existen en el servidor MySQL, la aplicación solicitará autorización o las creará automáticamente)*.
+
+---
+
+## 🧪 Pruebas Unitarias
+
+El proyecto cuenta con una batería de pruebas unitarias para validar las reglas de negocio críticas de forma aislada sin requerir de un servidor MySQL activo (usando `unittest.mock`):
+
+```bash
+python -m unittest tests/test_library.py
+```
+
+Las pruebas cubren escenarios críticos como:
+*   Intento de préstamos a usuarios no registrados.
+*   Intento de préstamos de libros no registrados.
+*   Intento de préstamos de libros que se encuentran sin stock físico.
+*   Validaciones de límites y restricciones de años de publicación.
+
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Consulte el archivo `LICENSE` para más detalles.
